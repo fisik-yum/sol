@@ -1,14 +1,14 @@
 use std::{io::BufReader, iter::Peekable};
 
 pub enum Token {
-    SeqKw,         // keyword `seq`
-    Ident(String), // a name
-    SeqStart,      // {
-    SeqEnd,        // }
-    GapStart,      // (
-    GapEnd,        // )
-    WS,            // whitespace
-    EOF,           // EOF
+    SeqKw,           // keyword `seq`
+    Literal(String), // a name
+    Figure(String),  //
+    SeqStart,        // {
+    SeqEnd,          // }
+    GapStart,        // (
+    GapEnd,          // )
+    EOF,             // EOF
 }
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -17,10 +17,10 @@ impl std::fmt::Display for Token {
             Self::SeqKw => write!(f, "seq"),
             Self::SeqStart => write!(f, "seq start"),
             Self::SeqEnd => write!(f, "seq end"),
-            Self::Ident(s) => write!(f, "ident({})", s),
+            Self::Literal(s) => write!(f, "ident({})", s),
+            Self::Figure(s) => write!(f, "figure({})", s),
             Self::GapStart => write!(f, "gap start"),
             Self::GapEnd => write!(f, "gap end"),
-            Self::WS => write!(f, "whitespace"),
             Self::EOF => write!(f, "EOF"),
         }
     }
@@ -46,7 +46,7 @@ impl Iterator for Tokenizer {
     // this may change
     fn next(&mut self) -> Option<Self::Item> {
         let iter = &mut self.reader;
-        if self.eof == true{
+        if self.eof == true {
             return None;
         }
         if iter.peek().is_none() {
@@ -62,6 +62,8 @@ impl Iterator for Tokenizer {
             }
         }
         // consume till whitespace
+        // NOTE: for now, we consider whitespace as significant
+        // sorta like bash
         let mut token_string = String::from("");
         while let Some(&c) = iter.peek() {
             if !c.is_whitespace() {
@@ -82,6 +84,6 @@ fn match_token(s: String) -> Token {
         "}" => Token::SeqEnd,
         "(" => Token::GapStart,
         ")" => Token::GapEnd,
-        _ => Token::Ident(s),
+        _ => Token::Literal(s),
     }
 }
