@@ -1,5 +1,6 @@
 use std::{fs,path::Path};
 mod tokenize;
+mod parse;
 fn main() {
     let p = Path::new("hello.sol");
     let f = fs::read(p);

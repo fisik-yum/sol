@@ -3,7 +3,7 @@ use std::{io::BufReader, iter::Peekable};
 pub enum Token {
     SeqKw,           // keyword `seq`
     Literal(String), // a name
-    Figure(String),  //
+    Figure(u8),      //
     SeqStart,        // {
     SeqEnd,          // }
     GapStart,        // (
@@ -12,13 +12,13 @@ pub enum Token {
 }
 impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "token ");
+        let _ = write!(f, "token ");
         match self {
             Self::SeqKw => write!(f, "seq"),
             Self::SeqStart => write!(f, "seq start"),
             Self::SeqEnd => write!(f, "seq end"),
             Self::Literal(s) => write!(f, "ident({})", s),
-            Self::Figure(s) => write!(f, "figure({})", s),
+            Self::Figure(u) => write!(f, "figure({})", u),
             Self::GapStart => write!(f, "gap start"),
             Self::GapEnd => write!(f, "gap end"),
             Self::EOF => write!(f, "EOF"),
@@ -27,15 +27,13 @@ impl std::fmt::Display for Token {
 }
 pub struct Tokenizer {
     reader: Peekable<std::vec::IntoIter<char>>,
-    eof: bool,
 }
 
 impl From<String> for Tokenizer {
-    fn from(s: String) -> Self {
+    fn from(value: String) -> Self {
         // dogshit code that will definitely not be fixed
         Tokenizer {
-            reader: s.chars().collect::<Vec<char>>().into_iter().peekable(),
-            eof: false,
+            reader: value.chars().collect::<Vec<char>>().into_iter().peekable(),
         }
     }
 }
@@ -46,12 +44,8 @@ impl Iterator for Tokenizer {
     // this may change
     fn next(&mut self) -> Option<Self::Item> {
         let iter = &mut self.reader;
-        if self.eof == true {
-            return None;
-        }
         if iter.peek().is_none() {
-            self.eof = true;
-            return Some(Token::EOF);
+            return None;
         }
         // skip WS
         while let Some(&c) = iter.peek() {
@@ -64,26 +58,52 @@ impl Iterator for Tokenizer {
         // consume till whitespace
         // NOTE: for now, we consider whitespace as significant
         // sorta like bash
-        let mut token_string = String::from("");
-        while let Some(&c) = iter.peek() {
-            if !c.is_whitespace() {
-                token_string.push(c);
+        if let Some(&c) = iter.peek() {
+            if is_control_character(&c) {
                 iter.next();
-            } else {
-                break;
+                return match_control_token(&c);
+            } else if c.is_alphanumeric() {
+                return extract_syntax_token(iter.by_ref());
             }
         }
-        return Some(match_token(token_string));
+        return Some(Token::EOF);
     }
 }
 
-fn match_token(s: String) -> Token {
-    match s.as_str() {
-        "seq" => Token::SeqKw,
-        "{" => Token::SeqStart,
-        "}" => Token::SeqEnd,
-        "(" => Token::GapStart,
-        ")" => Token::GapEnd,
-        _ => Token::Literal(s),
+fn is_control_character(c: &char) -> bool {
+    matches!(c, '{' | '}' | '(' | ')')
+}
+
+fn match_control_token(c: &char) -> Option<Token> {
+    match c {
+        '{' => Some(Token::SeqStart),
+        '}' => Some(Token::SeqEnd),
+        '(' => Some(Token::GapStart),
+        ')' => Some(Token::GapEnd),
+        _ => None,
+    }
+}
+
+fn extract_syntax_token(iter: &mut Peekable<std::vec::IntoIter<char>>) -> Option<Token> {
+    // do we *have* to do this?
+    let mut val = String::new();
+    while let Some(&c) = iter.peek() {
+        if is_control_character(&c) {
+            break;
+        }
+        if c.is_whitespace() {
+            break;
+        }
+        val.push(c);
+        iter.next();
+    }
+
+    if let Ok(num_form) = val.parse::<u8>() {
+        return Some(Token::Figure(num_form));
+    }
+    // for some reason this seems quite dodgy
+    match val.as_str() {
+        "seq" => Some(Token::SeqKw),
+        _ => Some(Token::Literal(val)),
     }
 }
