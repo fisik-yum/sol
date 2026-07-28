@@ -1,9 +1,14 @@
-use std::{io::BufReader, iter::Peekable};
+#[allow(unused_imports)]
+use std::{
+    io::{BufReader, Read},
+    iter::Peekable,
+};
 
 pub enum Token {
     SeqKw,           // keyword `seq`
+    SolKw,           // keyword `sol` (holds root program)
     Literal(String), // a name
-    Figure(u8),      //
+    Figure(usize),      //
     SeqStart,        // {
     SeqEnd,          // }
     GapStart,        // (
@@ -15,6 +20,7 @@ impl std::fmt::Display for Token {
         let _ = write!(f, "token ");
         match self {
             Self::SeqKw => write!(f, "seq"),
+            Self::SolKw => write!(f, "sol"),
             Self::SeqStart => write!(f, "seq start"),
             Self::SeqEnd => write!(f, "seq end"),
             Self::Literal(s) => write!(f, "ident({})", s),
@@ -40,8 +46,6 @@ impl From<String> for Tokenizer {
 
 impl Iterator for Tokenizer {
     type Item = Token;
-    // NOTE: for now, skip tokenizing whitespace.
-    // this may change
     fn next(&mut self) -> Option<Self::Item> {
         let iter = &mut self.reader;
         if iter.peek().is_none() {
@@ -56,8 +60,6 @@ impl Iterator for Tokenizer {
             }
         }
         // consume till whitespace
-        // NOTE: for now, we consider whitespace as significant
-        // sorta like bash
         if let Some(&c) = iter.peek() {
             if is_control_character(&c) {
                 iter.next();
@@ -98,12 +100,13 @@ fn extract_syntax_token(iter: &mut Peekable<std::vec::IntoIter<char>>) -> Option
         iter.next();
     }
 
-    if let Ok(num_form) = val.parse::<u8>() {
+    if let Ok(num_form) = val.parse::<usize>() {
         return Some(Token::Figure(num_form));
     }
     // for some reason this seems quite dodgy
     match val.as_str() {
         "seq" => Some(Token::SeqKw),
+        "sol" => Some(Token::SolKw),
         _ => Some(Token::Literal(val)),
     }
 }
