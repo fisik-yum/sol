@@ -11,13 +11,13 @@ enum State {
 }
 
 #[allow(dead_code)]
-pub struct Parser {
-    tok_stream: Peekable<Tokenizer>,
+pub struct Parser<'p> {
+    tok_stream: Peekable<Tokenizer<'p>>,
     stack: Vec<State>,
 }
 
-impl From<Tokenizer> for Parser {
-    fn from(value: Tokenizer) -> Self {
+impl<'p> From<Tokenizer<'p>> for Parser<'p> {
+    fn from(value: Tokenizer<'p>) -> Self {
         Self {
             tok_stream: value.peekable(),
             stack: Vec::new(),
@@ -26,8 +26,8 @@ impl From<Tokenizer> for Parser {
 }
 
 #[allow(dead_code)]
-impl Parser {
-    fn parse(&mut self) -> Node {
+impl<'p> Parser<'p> {
+    fn parse(&mut self) -> Node<'p> {
         // builds an AST object
         let iter = self.tok_stream.by_ref();
         let mut tree = Node::new(NodeType::Root);
@@ -56,7 +56,6 @@ impl Parser {
                     }
                     iter.next();
                 }
-                Token::EOF => {}
                 Token::SeqStart => {}
                 Token::SeqEnd => {}
                 Token::GapStart => {}
@@ -67,7 +66,7 @@ impl Parser {
     }
 
     // calling fn provides the parent node to attach to
-    fn parse_inner(&mut self) -> Node {
+    fn parse_inner(&mut self) -> Node<'p> {
         return Node::new(NodeType::Root);
     }
 

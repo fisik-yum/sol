@@ -1,21 +1,21 @@
+use std::{char, str::CharIndices};
 #[allow(unused_imports)]
 use std::{
     io::{BufReader, Read},
     iter::Peekable,
 };
 
-pub enum Token {
-    SeqKw,           // keyword `seq`
-    SolKw,           // keyword `sol` (holds root program)
-    Literal(String), // a name
-    Figure(usize),      //
-    SeqStart,        // {
-    SeqEnd,          // }
-    GapStart,        // (
-    GapEnd,          // )
-    EOF,             // EOF
+pub enum Token<'a> {
+    SeqKw,            // keyword `seq`
+    SolKw,            // keyword `sol` (holds root program)
+    Literal(&'a str), // a name
+    Figure(usize),    //
+    SeqStart,         // {
+    SeqEnd,           // }
+    GapStart,         // (
+    GapEnd,           // )
 }
-impl std::fmt::Display for Token {
+impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let _ = write!(f, "token ");
         match self {
@@ -27,48 +27,54 @@ impl std::fmt::Display for Token {
             Self::Figure(u) => write!(f, "figure({})", u),
             Self::GapStart => write!(f, "gap start"),
             Self::GapEnd => write!(f, "gap end"),
-            Self::EOF => write!(f, "EOF"),
         }
     }
 }
-pub struct Tokenizer {
-    reader: Peekable<std::vec::IntoIter<char>>,
+pub struct Tokenizer<'a> {
+    chars: Peekable<CharIndices<'a>>,
+    source: &'a str,
 }
 
-impl From<String> for Tokenizer {
-    fn from(value: String) -> Self {
+impl<'a> From<&'a str> for Tokenizer<'a> {
+    fn from(value: &'a str) -> Self {
         // dogshit code that will definitely not be fixed
         Tokenizer {
-            reader: value.chars().collect::<Vec<char>>().into_iter().peekable(),
+            chars: value.char_indices().peekable(),
+            source: value,
         }
     }
 }
 
-impl Iterator for Tokenizer {
-    type Item = Token;
-    fn next(&mut self) -> Option<Self::Item> {
-        let iter = &mut self.reader;
-        if iter.peek().is_none() {
-            return None;
-        }
-        // skip WS
-        while let Some(&c) = iter.peek() {
+impl<'a> Tokenizer<'a> {
+    fn skip_whitespace(&mut self) {
+        while let Some(&(_, c)) = self.chars.peek() {
             if c.is_whitespace() {
-                iter.next();
+                self.chars.next();
             } else {
                 break;
             }
         }
-        // consume till whitespace
-        if let Some(&c) = iter.peek() {
-            if is_control_character(&c) {
-                iter.next();
-                return match_control_token(&c);
-            } else if c.is_alphanumeric() {
-                return extract_syntax_token(iter.by_ref());
+    }
+}
+impl<'a> Iterator for Tokenizer<'a> {
+    type Item = Token<'a>;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.skip_whitespace();
+
+        let (start, _) = *self.chars.peek()?;
+        let mut end = self.source.len();
+        while let Some(&(i, c)) = self.chars.peek() {
+            if c.is_whitespace() {
+                end = i;
+                break;
+            } else if is_control_character(&c) {
+                self.chars.next();
+                return match_control_token(c);
             }
+            self.chars.next();
         }
-        return Some(Token::EOF);
+        let slice = &self.source[start..end];
+        return extract_syntax_token(slice);
     }
 }
 
@@ -76,7 +82,7 @@ fn is_control_character(c: &char) -> bool {
     matches!(c, '{' | '}' | '(' | ')')
 }
 
-fn match_control_token(c: &char) -> Option<Token> {
+fn match_control_token<'a>(c: char) -> Option<Token<'a>> {
     match c {
         '{' => Some(Token::SeqStart),
         '}' => Some(Token::SeqEnd),
@@ -86,25 +92,12 @@ fn match_control_token(c: &char) -> Option<Token> {
     }
 }
 
-fn extract_syntax_token(iter: &mut Peekable<std::vec::IntoIter<char>>) -> Option<Token> {
-    // do we *have* to do this?
-    let mut val = String::new();
-    while let Some(&c) = iter.peek() {
-        if is_control_character(&c) {
-            break;
-        }
-        if c.is_whitespace() {
-            break;
-        }
-        val.push(c);
-        iter.next();
-    }
-
+fn extract_syntax_token(val: &str) -> Option<Token> {
     if let Ok(num_form) = val.parse::<usize>() {
         return Some(Token::Figure(num_form));
     }
     // for some reason this seems quite dodgy
-    match val.as_str() {
+    match val {
         "seq" => Some(Token::SeqKw),
         "sol" => Some(Token::SolKw),
         _ => Some(Token::Literal(val)),

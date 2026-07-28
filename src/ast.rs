@@ -1,17 +1,17 @@
-pub enum NodeType {
+pub enum NodeType<'nt> {
     Root,
-    Sequence(String),
-    FnCall(String),
+    Sequence(&'nt str),
+    FnCall(&'nt str),
     Gap,
     Figure(usize),
 }
 
-pub struct Node {
-    node_type: NodeType,
-    pub children: Option<Vec<Node>>,
+pub struct Node<'n> {
+    node_type: NodeType<'n>,
+    pub children: Option<Vec<Node<'n>>>,
 }
-impl Node {
-    pub fn new(node_type: NodeType) -> Self {
+impl<'n> Node<'n> {
+    pub fn new(node_type: NodeType<'n>) -> Self {
         return Self {
             node_type,
             children: Some(vec![]),
