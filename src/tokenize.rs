@@ -1,14 +1,14 @@
-use std::{char, str::CharIndices};
+use std::str::CharIndices;
 #[allow(unused_imports)]
 use std::{
     io::{BufReader, Read},
     iter::Peekable,
 };
 
-pub enum Token<'a> {
+pub enum Token<'t> {
     SeqKw,            // keyword `seq`
     SolKw,            // keyword `sol` (holds root program)
-    Literal(&'a str), // a name
+    Literal(&'t str), // a name
     Figure(usize),    //
     SeqStart,         // {
     SeqEnd,           // }
@@ -55,33 +55,47 @@ impl<'a> Tokenizer<'a> {
             }
         }
     }
+    fn match_syntax_token(&self, val: &'a str) -> Option<Token<'a>> {
+        if let Ok(num_form) = val.parse::<usize>() {
+            return Some(Token::Figure(num_form));
+        }
+        // for some reason this seems quite dodgy
+        match val {
+            "{" => Some(Token::SeqStart),
+            "}" => Some(Token::SeqEnd),
+            "(" => Some(Token::GapStart),
+            ")" => Some(Token::GapEnd),
+            "seq" => Some(Token::SeqKw),
+            "sol" => Some(Token::SolKw),
+            _ => Some(Token::Literal(val)),
+        }
+    }
 }
 impl<'a> Iterator for Tokenizer<'a> {
     type Item = Token<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         self.skip_whitespace();
 
-        let (start, _) = *self.chars.peek()?;
+        let (start, first_char) = *self.chars.peek()?;
+
+        if is_control_character(first_char) {
+            self.chars.next(); // Consume '(' or ')' or '{' or '}'
+            return match_control_token(first_char);
+        }
+
         let mut end = self.source.len();
         while let Some(&(i, c)) = self.chars.peek() {
-            if c.is_whitespace() {
+            if c.is_whitespace() || is_control_character(c) {
                 end = i;
                 break;
-            } else if is_control_character(&c) {
-                self.chars.next();
-                return match_control_token(c);
             }
             self.chars.next();
         }
+
         let slice = &self.source[start..end];
-        return extract_syntax_token(slice);
+        self.match_syntax_token(slice)
     }
 }
-
-fn is_control_character(c: &char) -> bool {
-    matches!(c, '{' | '}' | '(' | ')')
-}
-
 fn match_control_token<'a>(c: char) -> Option<Token<'a>> {
     match c {
         '{' => Some(Token::SeqStart),
@@ -91,15 +105,6 @@ fn match_control_token<'a>(c: char) -> Option<Token<'a>> {
         _ => None,
     }
 }
-
-fn extract_syntax_token(val: &str) -> Option<Token> {
-    if let Ok(num_form) = val.parse::<usize>() {
-        return Some(Token::Figure(num_form));
-    }
-    // for some reason this seems quite dodgy
-    match val {
-        "seq" => Some(Token::SeqKw),
-        "sol" => Some(Token::SolKw),
-        _ => Some(Token::Literal(val)),
-    }
+fn is_control_character(c: char) -> bool {
+    matches!(c, '{' | '}' | '(' | ')')
 }

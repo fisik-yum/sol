@@ -1,7 +1,7 @@
-pub enum NodeType<'nt> {
+pub enum NodeType<'t> {
     Root,
-    Sequence(&'nt str),
-    FnCall(&'nt str),
+    Sequence(&'t str),
+    FnCall(&'t str),
     Gap,
     Figure(usize),
 }
@@ -9,6 +9,7 @@ pub enum NodeType<'nt> {
 pub struct Node<'n> {
     node_type: NodeType<'n>,
     pub children: Option<Vec<Node<'n>>>,
+    //symbol_table: &'n hash_map::HashMap<&'n str, Node<'n>>,
 }
 impl<'n> Node<'n> {
     pub fn new(node_type: NodeType<'n>) -> Self {
@@ -18,28 +19,9 @@ impl<'n> Node<'n> {
         };
     }
 
-    // WARN: Do not call this method as it is possibly broken
-    fn sum(&self) -> usize {
-        match &self.node_type {
-            NodeType::Sequence(_) => return 0,
-            NodeType::FnCall(_s) => {
-                // make_fn_call(s) to
-                // calculate inner sum
-                return 0;
-            }
-            NodeType::Gap => return self.sum_children(),
-            NodeType::Root => return self.sum_children(),
-            NodeType::Figure(u) => *u,
+    pub fn insert_node(&mut self, n: Node<'n>) {
+        if let Some(ch) = &mut self.children {
+            ch.push(n);
         }
-    }
-
-    fn sum_children(&self) -> usize {
-        let mut size: usize = 0;
-        if let Some(children) = self.children.as_ref() {
-            for node in children {
-                size += node.sum()
-            }
-        }
-        return size;
     }
 }
