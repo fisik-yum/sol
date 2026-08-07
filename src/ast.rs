@@ -24,4 +24,37 @@ impl<'n> Node<'n> {
             ch.push(n);
         }
     }
+    pub fn prettyprint(&self) {
+        self.dfs("", true);
+    }
+
+    fn dfs(&self, prefix: &str, is_last: bool) {
+        let connector = if is_last { "\\_" } else { "|- " };
+
+        println!("{prefix}{connector}{}", self.node_type);
+
+        // Prepare indentation prefix for children
+        let child_prefix = format!("{prefix}{}", if is_last { "    " } else { "|    " });
+
+        // Recursively print children
+        if let Some(children) = &self.children {
+            let count = children.len();
+            for (i, child) in children.iter().enumerate() {
+                let is_last_child = i == count - 1;
+                child.dfs(&child_prefix, is_last_child);
+            }
+        }
+    }
+}
+
+impl<'t> std::fmt::Display for NodeType<'t> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NodeType::Root => write!(f, "Root"),
+            NodeType::Sequence(s) => write!(f, "Sequence({s})"),
+            NodeType::FnCall(s) => write!(f, "FnCall({s})"),
+            NodeType::Gap => write!(f, "Gap"),
+            NodeType::Figure(n) => write!(f, "Figure({n})"),
+        }
+    }
 }

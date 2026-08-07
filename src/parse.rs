@@ -49,7 +49,7 @@ impl<'p> From<Tokenizer<'p>> for Parser<'p> {
 
 #[allow(dead_code)]
 impl<'p> Parser<'p> {
-    pub fn parse(&mut self) -> Node<'p> {
+    pub fn parse(mut self) -> Node<'p> {
         // builds an AST object
         let iter = self.tok_stream.by_ref();
         let mut tree = Node::new(NodeType::Root);
