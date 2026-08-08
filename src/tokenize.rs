@@ -15,6 +15,17 @@ pub enum Token<'t> {
     GapStart,         // (
     GapEnd,           // )
 }
+
+pub struct SpanToken<'s> {
+    span: (usize, usize),
+    tok: Token<'s>,
+}
+impl<'s> SpanToken<'s> {
+    pub fn token(self) -> Token<'s> {
+        self.tok
+    }
+}
+
 impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let _ = write!(f, "token ");
@@ -37,7 +48,6 @@ pub struct Tokenizer<'a> {
 
 impl<'a> From<&'a str> for Tokenizer<'a> {
     fn from(value: &'a str) -> Self {
-        // dogshit code that will definitely not be fixed
         Tokenizer {
             chars: value.char_indices().peekable(),
             source: value,

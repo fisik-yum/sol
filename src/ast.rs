@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeType<'t> {
     Root,
     Sequence(&'t str),
@@ -6,11 +7,23 @@ pub enum NodeType<'t> {
     Figure(usize),
 }
 
-pub struct Node<'n> {
-    node_type: NodeType<'n>,
-    pub children: Option<Vec<Node<'n>>>,
-    //symbol_table: &'n hash_map::HashMap<&'n str, Node<'n>>,
+impl<'t> std::fmt::Display for NodeType<'t> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            NodeType::Root => write!(f, "Root"),
+            NodeType::Sequence(s) => write!(f, "Sequence({s})"),
+            NodeType::FnCall(s) => write!(f, "FnCall({s})"),
+            NodeType::Gap => write!(f, "Gap"),
+            NodeType::Figure(n) => write!(f, "Figure({n})"),
+        }
+    }
 }
+
+pub struct Node<'n> {
+    pub node_type: NodeType<'n>,
+    pub children: Option<Vec<Node<'n>>>,
+}
+
 impl<'n> Node<'n> {
     pub fn new(node_type: NodeType<'n>) -> Self {
         return Self {
@@ -24,6 +37,7 @@ impl<'n> Node<'n> {
             ch.push(n);
         }
     }
+
     pub fn prettyprint(&self) {
         self.dfs("", true);
     }
@@ -33,28 +47,14 @@ impl<'n> Node<'n> {
 
         println!("{prefix}{connector}{}", self.node_type);
 
-        // Prepare indentation prefix for children
         let child_prefix = format!("{prefix}{}", if is_last { "    " } else { "|    " });
 
-        // Recursively print children
         if let Some(children) = &self.children {
             let count = children.len();
             for (i, child) in children.iter().enumerate() {
                 let is_last_child = i == count - 1;
                 child.dfs(&child_prefix, is_last_child);
             }
-        }
-    }
-}
-
-impl<'t> std::fmt::Display for NodeType<'t> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            NodeType::Root => write!(f, "Root"),
-            NodeType::Sequence(s) => write!(f, "Sequence({s})"),
-            NodeType::FnCall(s) => write!(f, "FnCall({s})"),
-            NodeType::Gap => write!(f, "Gap"),
-            NodeType::Figure(n) => write!(f, "Figure({n})"),
         }
     }
 }

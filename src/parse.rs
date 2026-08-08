@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+use std::fmt::Debug;
 use std::iter::Peekable;
 
 use crate::ast::{Node, NodeType};
 use crate::tokenize::{Token, Tokenizer};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Frame {
+pub enum Frame {
     Seq,
     Gap,
 }
@@ -12,13 +14,13 @@ enum Frame {
 #[allow(dead_code)]
 pub struct Parser<'p> {
     tok_stream: Peekable<Tokenizer<'p>>,
-    stack: SymbolStack,
+    stack: FrameStack,
 }
 
-pub struct SymbolStack {
+pub struct FrameStack {
     stack: Vec<Frame>,
 }
-impl SymbolStack {
+impl FrameStack {
     pub fn add_frame(&mut self, state: Frame) {
         self.stack.push(state);
     }
@@ -42,17 +44,18 @@ impl<'p> From<Tokenizer<'p>> for Parser<'p> {
     fn from(value: Tokenizer<'p>) -> Self {
         Self {
             tok_stream: value.peekable(),
-            stack: SymbolStack { stack: Vec::new() },
+            stack: FrameStack { stack: Vec::new() },
         }
     }
 }
 
 #[allow(dead_code)]
 impl<'p> Parser<'p> {
-    pub fn parse(mut self) -> Node<'p> {
+    pub fn parse(mut self) -> (Node<'p>, SymbolTable<'p>) {
         // builds an AST object
         let iter = self.tok_stream.by_ref();
         let mut tree = Node::new(NodeType::Root);
+        let mut sym_table = SymbolTable::new();
         while let Some(tok) = iter.peek() {
             match tok {
                 Token::SeqKw => {
@@ -62,6 +65,7 @@ impl<'p> Parser<'p> {
                         _ => panic!("expected seq identifier"),
                     };
                     let n = parse_seq(seq_name, iter.by_ref(), &mut self.stack);
+                    sym_table.insert(seq_name, tree.children.as_ref().unwrap().len());
                     tree.insert_node(n);
                 }
                 Token::SolKw => {
@@ -90,11 +94,11 @@ impl<'p> Parser<'p> {
                 }
             }
         }
-        tree
+        (tree, sym_table)
     }
 }
 // calling fn provides the parent node to attach to
-fn parse_seq<'a>(n: &'a str, iter: &mut Peekable<Tokenizer>, stack: &mut SymbolStack) -> Node<'a> {
+fn parse_seq<'a>(n: &'a str, iter: &mut Peekable<Tokenizer>, stack: &mut FrameStack) -> Node<'a> {
     let mut ret = Node::new(NodeType::Sequence(n));
     let _ = match iter.next() {
         Some(Token::SeqStart) => {
@@ -143,7 +147,7 @@ fn parse_seq<'a>(n: &'a str, iter: &mut Peekable<Tokenizer>, stack: &mut SymbolS
     return ret;
 }
 
-fn parse_gap<'a>(iter: &mut Peekable<Tokenizer>, stack: &mut SymbolStack) -> Node<'a> {
+fn parse_gap<'a>(iter: &mut Peekable<Tokenizer>, stack: &mut FrameStack) -> Node<'a> {
     let mut ret = Node::new(NodeType::Gap);
     let _ = match iter.next() {
         Some(Token::GapStart) => {
@@ -161,7 +165,7 @@ fn parse_gap<'a>(iter: &mut Peekable<Tokenizer>, stack: &mut SymbolStack) -> Nod
             }
             Token::Literal(_) => {
                 // iter.next();
-                panic!("WIP: cannot FnCall inside gap");
+                panic!("cannot FnCall inside gap");
             }
             Token::Figure(u) => {
                 ret.insert_node(Node::new(NodeType::Figure(*u)));
@@ -189,4 +193,35 @@ fn parse_gap<'a>(iter: &mut Peekable<Tokenizer>, stack: &mut SymbolStack) -> Nod
         }
     }
     return ret;
+}
+pub struct SymbolTable<'a> {
+    pub table: HashMap<&'a str, usize>,
+}
+
+impl<'a> SymbolTable<'a> {
+    pub fn new() -> Self {
+        Self {
+            table: HashMap::new(),
+        }
+    }
+    pub fn insert(&mut self, k: &'a str, idx: usize) {
+        if self.table.contains_key(k) {
+            panic!("sequence redefined: {k}")
+        } else {
+            self.table.insert(k, idx);
+        }
+    }
+
+    pub fn get(&self, k: &'a str) -> usize {
+        if self.table.contains_key(k) {
+            return *self.table.get(k).unwrap();
+        }
+        panic!("undefined sequence")
+    }
+}
+
+impl std::fmt::Display for SymbolTable<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.table.fmt(f)
+    }
 }
