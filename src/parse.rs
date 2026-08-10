@@ -56,14 +56,16 @@ impl<'p> Parser<'p> {
         let iter = self.tok_stream.by_ref();
         let mut tree = Node::new(NodeType::Root);
         let mut sym_table = SymbolTable::new();
-        while let Some(tok) = iter.peek() {
-            match tok {
+        while let Some(span) = iter.peek() {
+            match span.token() {
                 Token::SeqKw => {
                     iter.next();
-                    let seq_name = match iter.next() {
-                        Some(Token::Literal(s)) => s,
+                    let sp1 = iter.next().unwrap();
+                    let seq_name = match sp1.token() {
+                        (Token::Literal(s)) => s,
                         _ => panic!("expected seq identifier"),
                     };
+
                     let n = parse_seq(seq_name, iter.by_ref(), &mut self.stack);
                     sym_table.insert(seq_name, tree.children.as_ref().unwrap().len());
                     tree.insert_node(n);
@@ -100,14 +102,17 @@ impl<'p> Parser<'p> {
 // calling fn provides the parent node to attach to
 fn parse_seq<'a>(n: &'a str, iter: &mut Peekable<Tokenizer>, stack: &mut FrameStack) -> Node<'a> {
     let mut ret = Node::new(NodeType::Sequence(n));
-    let _ = match iter.next() {
-        Some(Token::SeqStart) => {
-            stack.add_frame(Frame::Seq);
-        }
-        _ => panic!("expected {{"),
-    };
-    while let Some(tok) = iter.peek() {
-        match tok {
+    if let Some(sp1) = iter.next() {
+        match sp1.token() {
+            Token::SeqStart => {
+                stack.add_frame(Frame::Seq);
+            }
+            _ => panic!("expected {{"),
+        };
+    }
+    {};
+    while let Some(span) = iter.peek() {
+        match span.token() {
             Token::SeqKw => {
                 panic!("cannot nest sequence")
             }
@@ -149,14 +154,17 @@ fn parse_seq<'a>(n: &'a str, iter: &mut Peekable<Tokenizer>, stack: &mut FrameSt
 
 fn parse_gap<'a>(iter: &mut Peekable<Tokenizer>, stack: &mut FrameStack) -> Node<'a> {
     let mut ret = Node::new(NodeType::Gap);
-    let _ = match iter.next() {
-        Some(Token::GapStart) => {
-            stack.add_frame(Frame::Gap);
-        }
-        _ => panic!("expected {{"),
-    };
-    while let Some(tok) = iter.peek() {
-        match tok {
+    if let Some(sp1) = iter.next() {
+        match sp1.token() {
+            Token::GapStart => {
+                stack.add_frame(Frame::Gap);
+            }
+            _ => panic!("expected {{"),
+        };
+    }
+    {};
+    while let Some(span) = iter.peek() {
+        match span.token() {
             Token::SeqKw => {
                 panic!("cannot nest sequence")
             }

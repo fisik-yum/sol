@@ -3,11 +3,11 @@ use std::{collections::VecDeque, fs, path::Path};
 mod ast;
 mod math;
 mod parse;
-mod talam;
 mod tokenize;
+mod solve;
 fn main() {
     let mut args: VecDeque<String> = std::env::args().collect();
-    args.pop_front(); // remove binary name
+    args.pop_front();
 
     let start = time::Instant::now();
     let loc = args.pop_front().unwrap();
@@ -15,6 +15,7 @@ fn main() {
     let f = fs::read(p);
 
     let t = String::from_utf8(f.unwrap()).unwrap();
+
     let tokenizer = tokenize::Tokenizer::from(t.as_str());
 
     let parser = parse::Parser::from(tokenizer);

@@ -17,12 +17,16 @@ pub enum Token<'t> {
 }
 
 pub struct SpanToken<'s> {
-    span: (usize, usize),
+    start: usize,
     tok: Token<'s>,
 }
 impl<'s> SpanToken<'s> {
-    pub fn token(self) -> Token<'s> {
-        self.tok
+    pub fn new(t: Token<'s>, s: usize) -> Self {
+        Self { start: s, tok: t }
+    }
+
+    pub fn token(&self) -> &Token<'s> {
+        &self.tok
     }
 }
 
@@ -65,24 +69,9 @@ impl<'a> Tokenizer<'a> {
             }
         }
     }
-    fn match_syntax_token(&self, val: &'a str) -> Option<Token<'a>> {
-        if let Ok(num_form) = val.parse::<usize>() {
-            return Some(Token::Figure(num_form));
-        }
-        // for some reason this seems quite dodgy
-        match val {
-            "{" => Some(Token::SeqStart),
-            "}" => Some(Token::SeqEnd),
-            "(" => Some(Token::GapStart),
-            ")" => Some(Token::GapEnd),
-            "seq" => Some(Token::SeqKw),
-            "sol" => Some(Token::SolKw),
-            _ => Some(Token::Literal(val)),
-        }
-    }
 }
 impl<'a> Iterator for Tokenizer<'a> {
-    type Item = Token<'a>;
+    type Item = SpanToken<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         self.skip_whitespace();
 
@@ -90,7 +79,7 @@ impl<'a> Iterator for Tokenizer<'a> {
 
         if is_control_character(first_char) {
             self.chars.next(); // Consume '(' or ')' or '{' or '}'
-            return match_control_token(first_char);
+            return Some(SpanToken::new(match_control_token(first_char), start));
         }
 
         let mut end = self.source.len();
@@ -103,18 +92,29 @@ impl<'a> Iterator for Tokenizer<'a> {
         }
 
         let slice = &self.source[start..end];
-        self.match_syntax_token(slice)
+        return Some(SpanToken::new(match_syntax_token(slice), start));
     }
 }
-fn match_control_token<'a>(c: char) -> Option<Token<'a>> {
+fn match_control_token<'a>(c: char) -> Token<'a> {
     match c {
-        '{' => Some(Token::SeqStart),
-        '}' => Some(Token::SeqEnd),
-        '(' => Some(Token::GapStart),
-        ')' => Some(Token::GapEnd),
-        _ => None,
+        '{' => (Token::SeqStart),
+        '}' => (Token::SeqEnd),
+        '(' => (Token::GapStart),
+        ')' => (Token::GapEnd),
+        _ => panic!("stoopid edge case!"),
     }
 }
 fn is_control_character(c: char) -> bool {
     matches!(c, '{' | '}' | '(' | ')')
+}
+fn match_syntax_token<'a>(val: &'a str) -> Token<'a> {
+    if let Ok(num_form) = val.parse::<usize>() {
+        return (Token::Figure(num_form));
+    }
+    // for some reason this seems quite dodgy
+    match val {
+        "seq" => (Token::SeqKw),
+        "sol" => (Token::SolKw),
+        _ => (Token::Literal(val)),
+    }
 }
