@@ -10,6 +10,9 @@ pub enum Frame {
     Seq,
     Gap,
 }
+pub struct ParseError {
+    msg: String,
+}
 
 #[allow(dead_code)]
 pub struct Parser<'p> {
@@ -60,15 +63,10 @@ impl<'p> Parser<'p> {
             match span.token() {
                 Token::SeqKw => {
                     iter.next();
-                    let sp1 = iter.next().unwrap();
-                    let seq_name = match sp1.token() {
-                        (Token::Literal(s)) => s,
-                        _ => panic!("expected seq identifier"),
-                    };
-
-                    let n = parse_seq(seq_name, iter.by_ref(), &mut self.stack);
-                    sym_table.insert(seq_name, tree.children.as_ref().unwrap().len());
-                    tree.insert_node(n);
+                    let n = parse_seq(iter.by_ref(), &mut self.stack);
+                    let id = n.get_name();
+                    let idx = tree.insert_node(n);
+                    sym_table.insert(id, idx);
                 }
                 Token::SolKw => {
                     panic!("use of restricted keyword");
@@ -99,9 +97,22 @@ impl<'p> Parser<'p> {
         (tree, sym_table)
     }
 }
+
+fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Option<&'a str> {
+    if let Some(span) = iter.next() {
+        match span.token() {
+            Token::Literal(s) => Some(s),
+            _ => None,
+        }
+    } else {
+        None
+    }
+}
+
 // calling fn provides the parent node to attach to
-fn parse_seq<'a>(n: &'a str, iter: &mut Peekable<Tokenizer>, stack: &mut FrameStack) -> Node<'a> {
-    let mut ret = Node::new(NodeType::Sequence(n));
+fn parse_seq<'a>(iter: &mut Peekable<Tokenizer<'a>>, stack: &mut FrameStack) -> Node<'a> {
+    let name = parse_ident(iter.by_ref()).unwrap();
+    let mut ret = Node::new(NodeType::Sequence(name));
     if let Some(sp1) = iter.next() {
         match sp1.token() {
             Token::SeqStart => {
@@ -152,7 +163,7 @@ fn parse_seq<'a>(n: &'a str, iter: &mut Peekable<Tokenizer>, stack: &mut FrameSt
     return ret;
 }
 
-fn parse_gap<'a>(iter: &mut Peekable<Tokenizer>, stack: &mut FrameStack) -> Node<'a> {
+fn parse_gap<'a>(iter: &mut Peekable<Tokenizer<'a>>, stack: &mut FrameStack) -> Node<'a> {
     let mut ret = Node::new(NodeType::Gap);
     if let Some(sp1) = iter.next() {
         match sp1.token() {

@@ -97,10 +97,10 @@ impl<'a> Iterator for Tokenizer<'a> {
 }
 fn match_control_token<'a>(c: char) -> Token<'a> {
     match c {
-        '{' => (Token::SeqStart),
-        '}' => (Token::SeqEnd),
-        '(' => (Token::GapStart),
-        ')' => (Token::GapEnd),
+        '{' => Token::SeqStart ,
+        '}' => Token::SeqEnd ,
+        '(' => Token::GapStart ,
+        ')' => Token::GapEnd ,
         _ => panic!("stoopid edge case!"),
     }
 }
@@ -109,12 +109,12 @@ fn is_control_character(c: char) -> bool {
 }
 fn match_syntax_token<'a>(val: &'a str) -> Token<'a> {
     if let Ok(num_form) = val.parse::<usize>() {
-        return (Token::Figure(num_form));
+        return Token::Figure(num_form) ;
     }
     // for some reason this seems quite dodgy
     match val {
-        "seq" => (Token::SeqKw),
-        "sol" => (Token::SolKw),
-        _ => (Token::Literal(val)),
+        "seq" => Token::SeqKw ,
+        "sol" => Token::SolKw ,
+        _ => Token::Literal(val) ,
     }
 }

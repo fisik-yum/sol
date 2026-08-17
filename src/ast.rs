@@ -32,12 +32,18 @@ impl<'n> Node<'n> {
         };
     }
 
-    pub fn insert_node(&mut self, n: Node<'n>) {
-        if let Some(ch) = &mut self.children {
-            ch.push(n);
-        }
+    pub fn insert_node(&mut self, n: Node<'n>) -> usize {
+        let ch = self.children.get_or_insert_with(Vec::new);
+        ch.push(n);
+        ch.len() - 1
     }
 
+    pub fn get_name(&self) -> &'n str {
+        match self.node_type {
+            NodeType::Sequence(s) => s,
+            _ => panic!(""),
+        }
+    }
     pub fn prettyprint(&self) {
         self.dfs("", true);
     }
