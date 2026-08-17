@@ -8,6 +8,8 @@ use std::{
 pub enum Token<'t> {
     SeqKw,            // keyword `seq`
     SolKw,            // keyword `sol` (holds root program)
+    TalKw,            // keyword `tal`
+    NadKw,            // keyword `nad`
     Literal(&'t str), // a name
     Figure(usize),    //
     SeqStart,         // {
@@ -40,6 +42,8 @@ impl std::fmt::Display for Token<'_> {
         match self {
             Self::SeqKw => write!(f, "seq"),
             Self::SolKw => write!(f, "sol"),
+            Self::TalKw=> write!(f, "tal"),
+            Self::NadKw=> write!(f, "nad"),
             Self::SeqStart => write!(f, "seq start"),
             Self::SeqEnd => write!(f, "seq end"),
             Self::Literal(s) => write!(f, "ident({})", s),
@@ -101,10 +105,10 @@ impl<'a> Iterator for Tokenizer<'a> {
 }
 fn match_control_token<'a>(c: char) -> Token<'a> {
     match c {
-        '{' => Token::SeqStart ,
-        '}' => Token::SeqEnd ,
-        '(' => Token::GapStart ,
-        ')' => Token::GapEnd ,
+        '{' => Token::SeqStart,
+        '}' => Token::SeqEnd,
+        '(' => Token::GapStart,
+        ')' => Token::GapEnd,
         _ => panic!("stoopid edge case!"),
     }
 }
@@ -113,12 +117,14 @@ fn is_control_character(c: char) -> bool {
 }
 fn match_syntax_token<'a>(val: &'a str) -> Token<'a> {
     if let Ok(num_form) = val.parse::<usize>() {
-        return Token::Figure(num_form) ;
+        return Token::Figure(num_form);
     }
     // for some reason this seems quite dodgy
     match val {
-        "seq" => Token::SeqKw ,
-        "sol" => Token::SolKw ,
-        _ => Token::Literal(val) ,
+        "sol" => Token::SolKw,
+        "seq" => Token::SeqKw,
+        "tal" => Token::TalKw,
+        "nad" => Token::NadKw,
+        _ => Token::Literal(val),
     }
 }

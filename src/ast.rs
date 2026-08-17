@@ -1,6 +1,8 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeType<'t> {
     Root,
+    Tal(usize),
+    Nad(usize),
     Sequence(&'t str),
     FnCall(&'t str),
     Gap,
@@ -12,6 +14,8 @@ impl<'t> std::fmt::Display for NodeType<'t> {
         match self {
             NodeType::Root => write!(f, "Root"),
             NodeType::Sequence(s) => write!(f, "Sequence({s})"),
+            NodeType::Tal(u) => write!(f, "Tal({u}a)"),
+            NodeType::Nad(u) => write!(f, "Nad({u}m)"),
             NodeType::FnCall(s) => write!(f, "FnCall({s})"),
             NodeType::Gap => write!(f, "Gap"),
             NodeType::Figure(n) => write!(f, "Figure({n})"),

@@ -41,6 +41,7 @@ fn size_helper(
                 res = res + size_helper(c, root, symbols, false);
             }
         }
+        _ => res = 0,
     }
     res
 }

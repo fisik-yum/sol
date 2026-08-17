@@ -1,3 +1,5 @@
+tal 8
+nad 4
 seq korvai {
     5 1 (4)
     5 6 1 (4) 2 (4)

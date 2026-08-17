@@ -116,6 +116,16 @@ impl<'p> Parser<'p> {
                 Token::SolKw => {
                     return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
                 }
+                Token::TalKw => {
+                    iter.next();
+                    let n = parse_tal(iter.by_ref())?;
+                    let _ = tree.insert_node(n);
+                }
+                Token::NadKw => {
+                    iter.next();
+                    let n = parse_nad(iter.by_ref())?;
+                    let _ = tree.insert_node(n);
+                }
                 Token::Literal(s) => {
                     tree.insert_node(Node::new(NodeType::FnCall(*s)));
                     iter.next();
@@ -150,12 +160,40 @@ fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, ParseE
     let pos = span.start();
     match span.token() {
         Token::Literal(s) => Ok(s),
-        other => Err(ParseError::at(pos, format!("expected an identifier, found {other}"))),
+        other => Err(ParseError::at(
+            pos,
+            format!("expected an identifier, found {other}"),
+        )),
+    }
+}
+fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, ParseError> {
+    let span = iter
+        .next()
+        .ok_or_else(|| ParseError::eof("expected a figure"))?;
+    let pos = span.start();
+    match span.token() {
+        Token::Figure(u) => Ok(*u),
+        other => Err(ParseError::at(
+            pos,
+            format!("expected an figure, found {other}"),
+        )),
     }
 }
 
+fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
+    let u = parse_figure(iter)?;
+    return Ok(Node::new(NodeType::Tal(u)));
+}
+
+fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
+    let u = parse_figure(iter)?;
+    return Ok(Node::new(NodeType::Nad(u)));
+}
 // calling fn provides the parent node to attach to
-fn parse_seq<'a>(iter: &mut Peekable<Tokenizer<'a>>, stack: &mut FrameStack) -> Result<Node<'a>, ParseError> {
+fn parse_seq<'a>(
+    iter: &mut Peekable<Tokenizer<'a>>,
+    stack: &mut FrameStack,
+) -> Result<Node<'a>, ParseError> {
     let name = parse_ident(iter.by_ref())?;
     let mut ret = Node::new(NodeType::Sequence(name));
     let sp1 = iter
@@ -180,6 +218,12 @@ fn parse_seq<'a>(iter: &mut Peekable<Tokenizer<'a>>, stack: &mut FrameStack) -> 
             }
             Token::SolKw => {
                 return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
+            }
+            Token::TalKw => {
+                return Err(ParseError::at(pos, "Cannot invoke 'tal' inside a sequence"));
+            }
+            Token::NadKw => {
+                return Err(ParseError::at(pos, "Cannot invoke 'nad' inside a sequence"));
             }
             Token::Literal(s) => {
                 return Err(ParseError::at(
@@ -215,7 +259,10 @@ fn parse_seq<'a>(iter: &mut Peekable<Tokenizer<'a>>, stack: &mut FrameStack) -> 
     Ok(ret)
 }
 
-fn parse_gap<'a>(iter: &mut Peekable<Tokenizer<'a>>, stack: &mut FrameStack) -> Result<Node<'a>, ParseError> {
+fn parse_gap<'a>(
+    iter: &mut Peekable<Tokenizer<'a>>,
+    stack: &mut FrameStack,
+) -> Result<Node<'a>, ParseError> {
     let mut ret = Node::new(NodeType::Gap);
     let sp1 = iter
         .next()
@@ -240,8 +287,17 @@ fn parse_gap<'a>(iter: &mut Peekable<Tokenizer<'a>>, stack: &mut FrameStack) -> 
             Token::SolKw => {
                 return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
             }
+            Token::TalKw => {
+                return Err(ParseError::at(pos, "cannot invoke 'tal' inside a gap."));
+            }
+            Token::NadKw => {
+                return Err(ParseError::at(pos, "Cannot invoke 'nad' inside a sequence"));
+            }
             Token::Literal(s) => {
-                return Err(ParseError::at(pos, format!("cannot call '{s}' inside a gap")));
+                return Err(ParseError::at(
+                    pos,
+                    format!("cannot call '{s}' inside a gap"),
+                ));
             }
             Token::Figure(u) => {
                 ret.insert_node(Node::new(NodeType::Figure(*u)));
