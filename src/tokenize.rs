@@ -28,6 +28,10 @@ impl<'s> SpanToken<'s> {
     pub fn token(&self) -> &Token<'s> {
         &self.tok
     }
+
+    pub fn start(&self) -> usize {
+        self.start
+    }
 }
 
 impl std::fmt::Display for Token<'_> {

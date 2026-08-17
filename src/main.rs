@@ -19,7 +19,13 @@ fn main() {
     let tokenizer = tokenize::Tokenizer::from(t.as_str());
 
     let parser = parse::Parser::from(tokenizer);
-    let (tree, table) = parser.parse();
+    let (tree, table) = match parser.parse() {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{}", e.report(&loc, &t));
+            std::process::exit(1);
+        }
+    };
 
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished parsing {loc} in {duration} microseconds");
