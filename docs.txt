@@ -1,0 +1,62 @@
+sol - documentation
+===================
+
+1. INTRO
+----------
+sol is a command-line program to describe 
+percussion solkattu. It is styled as a 
+declarative language with with the capacity 
+to process stored procedures.
+
+2. SYNTAX.
+----------
+The basic unit of annotation is the Figure, 
+or a single number describing the syllable, 
+usually in the absolute measurement, maathirai. Example:
+4
+(expected size 4)
+
+As semi-syntactical sugar, there exists a container 
+construct called a Gap, which roughly corresponds 
+to the concept of "kaarvai." This is enclosed in 
+parentheses:
+
+Example:
+4 (2) 4 (2) 4 (2)
+(expected size 18)
+
+A gap is required to be flat. That is, nesting 
+of gaps or any other container constructs is 
+disallowed.
+
+Arguably the most critical container is the 
+sequence, which can be named and called 
+like a function in traditional programming 
+languages.
+
+Example:
+seq a {
+4 (2) 4 (2) 4
+}
+
+The expected value of this program is considered 
+to be zero, because it has not been invoked yet. 
+Invocation occurs when the input is simply a literal 
+referencing the sequence (in this case, "a").
+
+Like gaps, sequences are required to be flat, in that 
+they cannot encompass other sequence declarations inside. 
+However, it is possible to invoke a sequence. Gaps are 
+allowed.
+
+3. ADDITIONAL CONSTRUCTS AND QUIRKS
+----------
+Annotations exist for record keeping, and in the future 
+may allow for some form of formal verification. 
+
+The two core constructs are "tal" and "nad", referencing 
+talam and nadai respectively. tal is a procedure that 
+annotates the length of one talam cycle (as akshara), while 
+nad annotates the value of one akshara (in maatirai).
+
+It is worth noting that tal cannot be invoked inside a container.

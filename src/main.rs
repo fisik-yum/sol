@@ -2,8 +2,9 @@ use std::time;
 use std::{collections::VecDeque, fs, path::Path};
 mod ast;
 mod math;
-mod parse;
+mod parser;
 mod tokenize;
+mod warnings;
 mod solve;
 fn main() {
     let mut args: VecDeque<String> = std::env::args().collect();
@@ -18,8 +19,7 @@ fn main() {
 
     let tokenizer = tokenize::Tokenizer::from(t.as_str());
 
-    let parser = parse::Parser::from(tokenizer);
-    let (tree, table) = match parser.parse() {
+    let (tree, table) = match parser::parse(tokenizer) {
         Ok(v) => v,
         Err(e) => {
             eprintln!("{}", e.report(&loc, &t));

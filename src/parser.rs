@@ -4,64 +4,12 @@ use std::iter::Peekable;
 
 use crate::ast::{Node, NodeType};
 use crate::tokenize::{Token, Tokenizer};
+use crate::warnings::ParseError;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Frame {
     Seq,
     Gap,
-}
-pub struct ParseError {
-    pos: Option<usize>,
-    msg: String,
-}
-
-impl ParseError {
-    fn at(pos: usize, msg: impl Into<String>) -> Self {
-        Self {
-            pos: Some(pos),
-            msg: msg.into(),
-        }
-    }
-
-    fn eof(msg: impl Into<String>) -> Self {
-        Self {
-            pos: None,
-            msg: msg.into(),
-        }
-    }
-
-    pub fn report(&self, filename: &str, src: &str) -> String {
-        match self.pos {
-            Some(pos) => {
-                let (line, col) = Self::line_col(src, pos);
-                format!("{filename}:{line}:{col}: error: {}", self.msg)
-            }
-            None => format!("{filename}: error: {} (at end of input)", self.msg),
-        }
-    }
-
-    fn line_col(src: &str, pos: usize) -> (usize, usize) {
-        let mut line = 1;
-        let mut col = 1;
-        for (i, c) in src.char_indices() {
-            if i >= pos {
-                break;
-            }
-            if c == '\n' {
-                line += 1;
-                col = 1;
-            } else {
-                col += 1;
-            }
-        }
-        (line, col)
-    }
-}
-
-#[allow(dead_code)]
-pub struct Parser<'p> {
-    tok_stream: Peekable<Tokenizer<'p>>,
-    stack: FrameStack,
 }
 
 pub struct FrameStack {
@@ -87,70 +35,60 @@ impl FrameStack {
     }
 }
 
-impl<'p> From<Tokenizer<'p>> for Parser<'p> {
-    fn from(value: Tokenizer<'p>) -> Self {
-        Self {
-            tok_stream: value.peekable(),
-            stack: FrameStack { stack: Vec::new() },
-        }
-    }
-}
-
-#[allow(dead_code)]
-impl<'p> Parser<'p> {
-    pub fn parse(mut self) -> Result<(Node<'p>, SymbolTable<'p>), ParseError> {
-        // builds an AST object
-        let iter = self.tok_stream.by_ref();
-        let mut tree = Node::new(NodeType::Root);
-        let mut sym_table = SymbolTable::new();
-        while let Some(span) = iter.peek() {
-            let pos = span.start();
-            match span.token() {
-                Token::SeqKw => {
-                    iter.next();
-                    let n = parse_seq(iter.by_ref(), &mut self.stack)?;
-                    let id = n.get_name();
-                    let idx = tree.insert_node(n);
-                    sym_table.insert(id, idx, pos)?;
-                }
-                Token::SolKw => {
-                    return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
-                }
-                Token::TalKw => {
-                    iter.next();
-                    let n = parse_tal(iter.by_ref())?;
-                    let _ = tree.insert_node(n);
-                }
-                Token::NadKw => {
-                    iter.next();
-                    let n = parse_nad(iter.by_ref())?;
-                    let _ = tree.insert_node(n);
-                }
-                Token::Literal(s) => {
-                    tree.insert_node(Node::new(NodeType::FnCall(*s)));
-                    iter.next();
-                }
-                Token::Figure(u) => {
-                    tree.insert_node(Node::new(NodeType::Figure(*u)));
-                    iter.next();
-                }
-                Token::SeqStart => {
-                    return Err(ParseError::at(pos, "unexpected '{' (anonymous sequence)"));
-                }
-                Token::SeqEnd => {
-                    return Err(ParseError::at(pos, "unexpected '}' (no matching sequence)"));
-                }
-                Token::GapStart => {
-                    let n = parse_gap(iter.by_ref(), &mut self.stack)?;
-                    tree.insert_node(n);
-                }
-                Token::GapEnd => {
-                    return Err(ParseError::at(pos, "unexpected ')' (no matching gap)"));
-                }
+pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>), ParseError> {
+    // builds an AST object
+    let mut tok_stream = tokenizer.peekable();
+    let iter = tok_stream.by_ref();
+    let mut stack = FrameStack { stack: Vec::new() };
+    let mut tree = Node::new(NodeType::Root);
+    let mut sym_table = SymbolTable::new();
+    while let Some(span) = iter.peek() {
+        let pos = span.start();
+        match span.token() {
+            Token::SeqKw => {
+                iter.next();
+                let n = parse_seq(iter.by_ref(), &mut stack)?;
+                let id = n.get_name();
+                let idx = tree.insert_node(n);
+                sym_table.insert(id, idx, pos)?;
+            }
+            Token::SolKw => {
+                return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
+            }
+            Token::TalKw => {
+                iter.next();
+                let n = parse_tal(iter.by_ref())?;
+                let _ = tree.insert_node(n);
+            }
+            Token::NadKw => {
+                iter.next();
+                let n = parse_nad(iter.by_ref())?;
+                let _ = tree.insert_node(n);
+            }
+            Token::Literal(s) => {
+                tree.insert_node(Node::new(NodeType::FnCall(*s)));
+                iter.next();
+            }
+            Token::Figure(u) => {
+                tree.insert_node(Node::new(NodeType::Figure(*u)));
+                iter.next();
+            }
+            Token::SeqStart => {
+                return Err(ParseError::at(pos, "unexpected '{' (anonymous sequence)"));
+            }
+            Token::SeqEnd => {
+                return Err(ParseError::at(pos, "unexpected '}' (no matching sequence)"));
+            }
+            Token::GapStart => {
+                let n = parse_gap(iter.by_ref(), &mut stack)?;
+                tree.insert_node(n);
+            }
+            Token::GapEnd => {
+                return Err(ParseError::at(pos, "unexpected ')' (no matching gap)"));
             }
         }
-        Ok((tree, sym_table))
     }
+    Ok((tree, sym_table))
 }
 
 fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, ParseError> {

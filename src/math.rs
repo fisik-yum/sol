@@ -1,13 +1,13 @@
-use crate::{ast, parse};
+use crate::{ast, parser};
 
-pub fn count_m(head: &ast::Node, root: &ast::Node, symbol_table: &parse::SymbolTable) -> usize {
+pub fn count_m(head: &ast::Node, root: &ast::Node, symbol_table: &parser::SymbolTable) -> usize {
     return size_helper(head, root, symbol_table, false);
 }
 
 fn size_helper(
     n: &ast::Node,
     root: &ast::Node,
-    symbols: &parse::SymbolTable,
+    symbols: &parser::SymbolTable,
     seq_lookup_state: bool,
 ) -> usize {
     let mut res: usize = 0;
