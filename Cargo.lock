@@ -12,4 +12,3 @@ dependencies = [
 [[package]]
 name = "talm"
 version = "0.1.0"
-source = "git+https://github.com/fisik-yum/talm.git#d88f2e0b43fedc97b9c3d0d317a7b4ebfeff62d8"

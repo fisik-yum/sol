@@ -32,5 +32,5 @@ fn main() {
     tree.prettyprint();
 
     let size = math::count_m(&tree, &tree, &table);
-    println!("tree size: {size}");
+    println!("tree size: {}",size);
 }
