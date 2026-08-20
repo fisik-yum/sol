@@ -1,11 +1,11 @@
 use std::time;
 use std::{collections::VecDeque, fs, path::Path};
 mod ast;
-mod math;
+mod calc;
 mod parser;
 mod tokenize;
+mod transform;
 mod warnings;
-mod solve;
 fn main() {
     let mut args: VecDeque<String> = std::env::args().collect();
     args.pop_front();
@@ -31,6 +31,9 @@ fn main() {
     println!("finished parsing {loc} in {duration} microseconds");
     tree.prettyprint();
 
-    let size = math::count_m(&tree, &tree, &table);
-    println!("tree size: {}",size);
+    let size = calc::mat::count_m(&tree, &tree, &table);
+    println!("tree size: {}", size);
+
+    let size = calc::aks::count_a(&tree, &table);
+    println!("tree size: {}", size);
 }

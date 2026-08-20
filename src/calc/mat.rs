@@ -5,7 +5,7 @@ pub fn count_m(head: &ast::Node, root: &ast::Node, symbol_table: &parser::Symbol
     return size_helper(head, root, symbol_table, false);
 }
 
-fn size_helper(
+pub fn size_helper(
     n: &ast::Node,
     root: &ast::Node,
     symbols: &parser::SymbolTable,

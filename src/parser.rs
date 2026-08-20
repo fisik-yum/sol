@@ -42,6 +42,33 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>)
     let mut stack = FrameStack { stack: Vec::new() };
     let mut tree = Node::new(NodeType::Root);
     let mut sym_table = SymbolTable::new();
+
+    // set default tal
+    if let Some(tal_set) = iter.peek() {
+        match tal_set.token() {
+            Token::TalKw => {
+                iter.next();
+                let n = parse_tal(iter.by_ref())?;
+                let _ = tree.insert_node(n);
+            }
+            _ => {
+                let pos = tal_set.start();
+                return Err(ParseError::at(
+                    pos,
+                    "Expected tal decl at beginning of file",
+                ));
+            }
+        }
+    } else {
+        // NOTE: is this normal behavior?
+        return Err(ParseError::at(0, "Expected tal decl at beginning of file"));
+    }
+
+    // insert default nad node
+    tree.insert_node(Node::new(NodeType::Nad(4)));
+    // in the future we may want something more intelligent
+    // this can be immediately overriden, btw.
+
     while let Some(span) = iter.peek() {
         let pos = span.start();
         match span.token() {
