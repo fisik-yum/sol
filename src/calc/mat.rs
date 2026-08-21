@@ -1,7 +1,7 @@
 use crate::{ast, parser};
-use talm::unit::Mat;
+use talm::unit::Mathrai;
 
-pub fn count_m(head: &ast::Node, root: &ast::Node, symbol_table: &parser::SymbolTable) -> Mat {
+pub fn count_m(head: &ast::Node, root: &ast::Node, symbol_table: &parser::SymbolTable) -> Mathrai {
     return size_helper(head, root, symbol_table, false);
 }
 
@@ -10,10 +10,10 @@ pub fn size_helper(
     root: &ast::Node,
     symbols: &parser::SymbolTable,
     seq_lookup_state: bool,
-) -> Mat {
-    let mut res = Mat(0);
+) -> Mathrai {
+    let mut res = Mathrai(0);
     match n.node_type {
-        ast::NodeType::Figure(u) => return Mat(u),
+        ast::NodeType::Figure(u) => return Mathrai(u),
         ast::NodeType::FnCall(s) => {
             let pos = symbols.get(s);
             if let Some(root_children) = &root.children {
@@ -36,13 +36,13 @@ pub fn size_helper(
         }
         ast::NodeType::Sequence(_) => {
             if !seq_lookup_state {
-                return Mat(0);
+                return Mathrai(0);
             }
             for c in n.children.as_ref().unwrap() {
                 res = res + size_helper(c, root, symbols, false);
             }
         }
-        _ => res = Mat(0),
+        _ => res = Mathrai(0),
     }
     res
 }

@@ -3,32 +3,39 @@ use crate::{
     calc::mat::{count_m, size_helper},
     parser,
 };
-use talm::unit::{Aks, Mat};
+use talm::aks::*;
+use talm::unit::Mathrai;
 
-pub fn count_a(root: &ast::Node, symbol_table: &parser::SymbolTable) -> Aks {
-    let mut ret = Aks::new(0, Mat(0));
+pub fn count_a(root: &ast::Node, symbol_table: &parser::SymbolTable) -> StandardAkshara {
+    let mut ret = StandardAkshara {
+        count: 0,
+        edam: Carry { num: 0, den: 4 },
+    };
+    let mut accumulator = Mathrai(0);
     let chld = root.children.as_ref().unwrap();
 
-    let mut c_nadai = Mat(4);
+    let mut curr_nad = Mathrai(4);
 
     for n in chld {
         match n.node_type {
             NodeType::Nad(u) => {
-                c_nadai.0 = u;
+                ret = ret + StandardAkshara::from_mathrai(accumulator, curr_nad);
+                accumulator = Mathrai(0);
+                curr_nad.0 = u;
             }
             NodeType::Figure(u) => {
-                ret = ret + Aks::from_n_m(c_nadai, Mat(u));
+                accumulator = accumulator + Mathrai(u);
             }
             NodeType::Gap => {
                 let mc = count_m(n, root, symbol_table);
-                ret = ret + Aks::from_n_m(c_nadai, mc);
+                accumulator = accumulator + mc;
             }
             NodeType::FnCall(s) => {
                 let pos = symbol_table.get(s);
                 if let Some(root_children) = &root.children {
                     let target_fn_node = &root_children[pos];
                     let mc = size_helper(target_fn_node, root, symbol_table, true);
-                    ret = ret + Aks::from_n_m(c_nadai, mc);
+                    accumulator = accumulator + mc;
                 } else {
                     panic!("symbol table lookup: undefined behavior - {s}");
                 }
@@ -36,5 +43,7 @@ pub fn count_a(root: &ast::Node, symbol_table: &parser::SymbolTable) -> Aks {
             _ => {}
         }
     }
+
+    ret = ret + StandardAkshara::from_mathrai(accumulator, curr_nad);
     return ret;
 }

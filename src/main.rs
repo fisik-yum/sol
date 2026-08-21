@@ -4,7 +4,6 @@ mod ast;
 mod calc;
 mod parser;
 mod tokenize;
-mod transform;
 mod warnings;
 fn main() {
     let mut args: VecDeque<String> = std::env::args().collect();
