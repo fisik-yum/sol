@@ -45,7 +45,7 @@ impl<'n> Node<'n> {
     pub fn get_name(&self) -> &'n str {
         match self.node_type {
             NodeType::Sequence(s) => s,
-            _ => panic!(""),
+            _ => panic!("get_name called on a non-Sequence node: {}", self.node_type),
         }
     }
     pub fn prettyprint(&self) {

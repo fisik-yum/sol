@@ -154,6 +154,106 @@ fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseEr
     let u = parse_figure(iter)?;
     return Ok(Node::new(NodeType::Nad(u)));
 }
+#[derive(Clone, Copy)]
+enum BodyKind {
+    Seq,
+    Gap,
+}
+
+impl BodyKind {
+    fn name(&self) -> &'static str {
+        match self {
+            BodyKind::Seq => "a sequence",
+            BodyKind::Gap => "a gap",
+        }
+    }
+}
+
+// shared token dispatch for sequence and gap bodies; they accept the same
+// tokens (figures and, inside a sequence, nested gaps) and reject everything
+// else with a context-specific message.
+fn parse_body<'a>(
+    iter: &mut Peekable<Tokenizer<'a>>,
+    stack: &mut FrameStack,
+    kind: BodyKind,
+    target: &mut Node<'a>,
+) -> Result<(), ParseError> {
+    while let Some(span) = iter.peek() {
+        let pos = span.start();
+        match span.token() {
+            Token::SeqKw => {
+                return Err(ParseError::at(pos, "cannot nest a sequence definition"));
+            }
+            Token::SolKw => {
+                return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
+            }
+            Token::TalKw => {
+                return Err(ParseError::at(
+                    pos,
+                    format!("cannot invoke 'tal' inside {}", kind.name()),
+                ));
+            }
+            Token::NadKw => {
+                return Err(ParseError::at(
+                    pos,
+                    format!("cannot invoke 'nad' inside {}", kind.name()),
+                ));
+            }
+            Token::Literal(s) => {
+                return Err(ParseError::at(
+                    pos,
+                    format!("cannot call '{s}' inside {}", kind.name()),
+                ));
+            }
+            Token::Figure(u) => {
+                target.insert_node(Node::new(NodeType::Figure(*u)));
+                iter.next();
+            }
+            Token::SeqStart => {
+                return Err(ParseError::at(pos, "unexpected '{' (anonymous sequence)"));
+            }
+            Token::SeqEnd => match kind {
+                BodyKind::Seq => {
+                    iter.next();
+                    if stack.match_last(&Frame::Seq) {
+                        stack.pop_last();
+                        return Ok(());
+                    } else {
+                        return Err(ParseError::at(pos, "unmatched '}'"));
+                    }
+                }
+                BodyKind::Gap => {
+                    return Err(ParseError::at(pos, "unopened sequence block"));
+                }
+            },
+            Token::GapStart => match kind {
+                BodyKind::Seq => {
+                    let n = parse_gap(iter.by_ref(), stack)?;
+                    target.insert_node(n);
+                }
+                BodyKind::Gap => {
+                    return Err(ParseError::at(pos, "cannot nest gaps"));
+                }
+            },
+            Token::GapEnd => match kind {
+                BodyKind::Gap => {
+                    iter.next();
+                    if stack.match_last(&Frame::Gap) {
+                        stack.pop_last();
+                        return Ok(());
+                    } else {
+                        return Err(ParseError::at(pos, "unmatched ')'"));
+                    }
+                }
+                BodyKind::Seq => {
+                    return Err(ParseError::at(pos, "unexpected ')' (no matching gap)"));
+                }
+            },
+        }
+    }
+    Ok(())
+}
+
 // calling fn provides the parent node to attach to
 fn parse_seq<'a>(
     iter: &mut Peekable<Tokenizer<'a>>,
@@ -175,52 +275,7 @@ fn parse_seq<'a>(
             ));
         }
     };
-    while let Some(span) = iter.peek() {
-        let pos = span.start();
-        match span.token() {
-            Token::SeqKw => {
-                return Err(ParseError::at(pos, "cannot nest a sequence definition"));
-            }
-            Token::SolKw => {
-                return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
-            }
-            Token::TalKw => {
-                return Err(ParseError::at(pos, "Cannot invoke 'tal' inside a sequence"));
-            }
-            Token::NadKw => {
-                return Err(ParseError::at(pos, "Cannot invoke 'nad' inside a sequence"));
-            }
-            Token::Literal(s) => {
-                return Err(ParseError::at(
-                    pos,
-                    format!("cannot call '{s}' inside a sequence (not yet supported)"),
-                ));
-            }
-            Token::Figure(u) => {
-                ret.insert_node(Node::new(NodeType::Figure(*u)));
-                iter.next();
-            }
-            Token::SeqStart => {
-                return Err(ParseError::at(pos, "unexpected '{' (anonymous sequence)"));
-            }
-            Token::SeqEnd => {
-                iter.next();
-                if stack.match_last(&Frame::Seq) {
-                    stack.pop_last();
-                    break;
-                } else {
-                    return Err(ParseError::at(pos, "unmatched '}'"));
-                }
-            }
-            Token::GapStart => {
-                let n = parse_gap(iter.by_ref(), stack)?;
-                ret.insert_node(n);
-            }
-            Token::GapEnd => {
-                return Err(ParseError::at(pos, "unexpected ')' (no matching gap)"));
-            }
-        }
-    }
+    parse_body(iter, stack, BodyKind::Seq, &mut ret)?;
     Ok(ret)
 }
 
@@ -243,51 +298,7 @@ fn parse_gap<'a>(
             ));
         }
     };
-    while let Some(span) = iter.peek() {
-        let pos = span.start();
-        match span.token() {
-            Token::SeqKw => {
-                return Err(ParseError::at(pos, "cannot nest a sequence definition"));
-            }
-            Token::SolKw => {
-                return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
-            }
-            Token::TalKw => {
-                return Err(ParseError::at(pos, "cannot invoke 'tal' inside a gap."));
-            }
-            Token::NadKw => {
-                return Err(ParseError::at(pos, "Cannot invoke 'nad' inside a sequence"));
-            }
-            Token::Literal(s) => {
-                return Err(ParseError::at(
-                    pos,
-                    format!("cannot call '{s}' inside a gap"),
-                ));
-            }
-            Token::Figure(u) => {
-                ret.insert_node(Node::new(NodeType::Figure(*u)));
-                iter.next();
-            }
-            Token::SeqStart => {
-                return Err(ParseError::at(pos, "unexpected '{' (anonymous sequence)"));
-            }
-            Token::SeqEnd => {
-                return Err(ParseError::at(pos, "unopened sequence block"));
-            }
-            Token::GapStart => {
-                return Err(ParseError::at(pos, "cannot nest gaps"));
-            }
-            Token::GapEnd => {
-                iter.next();
-                if stack.match_last(&Frame::Gap) {
-                    stack.pop_last();
-                    break;
-                } else {
-                    return Err(ParseError::at(pos, "unmatched ')'"));
-                }
-            }
-        }
-    }
+    parse_body(iter, stack, BodyKind::Gap, &mut ret)?;
     Ok(ret)
 }
 pub struct SymbolTable<'a> {
@@ -308,11 +319,11 @@ impl<'a> SymbolTable<'a> {
         Ok(())
     }
 
-    pub fn get(&self, k: &'a str) -> usize {
-        if self.table.contains_key(k) {
-            return *self.table.get(k).unwrap();
-        }
-        panic!("undefined sequence")
+    pub fn get(&self, k: &'a str) -> Result<usize, ParseError> {
+        self.table
+            .get(k)
+            .copied()
+            .ok_or_else(|| ParseError::global(format!("undefined sequence: {k}")))
     }
 }
 

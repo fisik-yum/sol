@@ -42,11 +42,23 @@ fn main() {
         tree.prettyprint();
     }
 
-    let size = sol::calc::mat::count_m(&tree, &tree, &table);
+    let size = match sol::calc::mat::count_m(&tree, &tree, &table) {
+        Ok(v) => v,
+        Err(e) => {
+            eprintln!("{}", e.report(&loc, &t));
+            std::process::exit(1);
+        }
+    };
     println!("parse size: {}", size);
 
     if args.aksh {
-        let size = sol::calc::aks::count_a(&tree, &table);
+        let size = match sol::calc::aks::count_a(&tree, &table) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("{}", e.report(&loc, &t));
+                std::process::exit(1);
+            }
+        };
         println!("tree size: {}", size);
     }
 

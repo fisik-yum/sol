@@ -14,6 +14,13 @@ impl ParseError {
     pub fn eof(msg: impl Into<String>) -> Self {
         Self {
             pos: None,
+            msg: format!("{} (unexpected end of input)", msg.into()),
+        }
+    }
+
+    pub fn global(msg: impl Into<String>) -> Self {
+        Self {
+            pos: None,
             msg: msg.into(),
         }
     }
@@ -24,7 +31,7 @@ impl ParseError {
                 let (line, col) = Self::line_col(src, pos);
                 format!("{filename}:{line}:{col}: error: {}", self.msg)
             }
-            None => format!("{filename}: error: {} (at end of input)", self.msg),
+            None => format!("{filename}: error: {}", self.msg),
         }
     }
 
