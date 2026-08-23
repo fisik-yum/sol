@@ -1,0 +1,2 @@
+error: mirror-extcopy::init(): missing ext_image_copy_capture protocol
+warning: mirror::auto_backend_fallback(): falling back to backend screencopy-dmabuf

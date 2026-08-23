@@ -1,4 +1,4 @@
-use crate::{ast, parser};
+use crate::sys::{ast, parser};
 use talm::unit::Mathrai;
 
 pub fn count_m(head: &ast::Node, root: &ast::Node, symbol_table: &parser::SymbolTable) -> Mathrai {

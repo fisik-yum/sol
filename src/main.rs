@@ -1,19 +1,31 @@
+use clap::Parser;
+use sol::sys::{parser, tokenize};
 use std::time;
-use std::{collections::VecDeque, fs, path::Path};
-mod ast;
-mod calc;
-mod parser;
-mod tokenize;
-mod warnings;
+use std::{fs, path::Path};
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short = 'f', long = "file")]
+    f: String,
+
+    // print tree
+    #[arg(long, default_value_t = false)]
+    tree: bool,
+
+    // print akshara count
+    #[arg(long, default_value_t = false)]
+    aksh: bool,
+}
 fn main() {
-    let mut args: VecDeque<String> = std::env::args().collect();
-    args.pop_front();
+    let args = Args::parse();
+
+    let loc = &args.f.as_str();
+    let p = Path::new(&loc);
 
     let start = time::Instant::now();
-    let loc = args.pop_front().unwrap();
-    let p = Path::new(loc.as_str());
-    let f = fs::read(p);
 
+    let f = fs::read(p);
     let t = String::from_utf8(f.unwrap()).unwrap();
 
     let tokenizer = tokenize::Tokenizer::from(t.as_str());
@@ -26,13 +38,18 @@ fn main() {
         }
     };
 
+    if args.tree {
+        tree.prettyprint();
+    }
+
+    let size = sol::calc::mat::count_m(&tree, &tree, &table);
+    println!("parse size: {}", size);
+
+    if args.aksh {
+        let size = sol::calc::aks::count_a(&tree, &table);
+        println!("tree size: {}", size);
+    }
+
     let duration = (time::Instant::now() - start).as_micros();
-    println!("finished parsing {loc} in {duration} microseconds");
-    tree.prettyprint();
-
-    let size = calc::mat::count_m(&tree, &tree, &table);
-    println!("tree size: {}", size);
-
-    let size = calc::aks::count_a(&tree, &table);
-    println!("tree size: {}", size);
+    println!("finished executing {loc} in {duration} microseconds");
 }

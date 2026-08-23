@@ -1,7 +1,7 @@
 use crate::{
-    ast::{self, NodeType},
+    sys::ast::{self, NodeType},
     calc::mat::{count_m, size_helper},
-    parser,
+    sys::parser,
 };
 use talm::aks::*;
 use talm::unit::Mathrai;
