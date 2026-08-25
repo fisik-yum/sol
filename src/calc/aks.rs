@@ -1,6 +1,6 @@
 use crate::{
-    sys::ast::{self, NodeType},
     calc::mat::{count_m, size_helper},
+    sys::ast::{self, NodeType},
     sys::parser,
     sys::warnings::ParseError,
 };

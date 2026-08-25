@@ -6,12 +6,12 @@ use std::{
 };
 
 pub enum Token<'t> {
-    Seq,            // keyword `seq`
-    Sol,            // keyword `sol` (holds root program)
-    Tal,            // keyword `tal`
-    Nad,            // keyword `nad`
-    Mat,            // keyword 'mat'
-    Aks,            // keyword 'aks'
+    Seq,              // keyword `seq`
+    Sol,              // keyword `sol` (holds root program)
+    Tal,              // keyword `tal`
+    Nad,              // keyword `nad`
+    Mat,              // keyword 'mat'
+    Aks,              // keyword 'aks'
     Literal(&'t str), // a name
     Figure(usize),    //
     SeqStart,         // {
@@ -46,8 +46,8 @@ impl std::fmt::Display for Token<'_> {
             Self::Sol => write!(f, "sol"),
             Self::Tal => write!(f, "tal"),
             Self::Nad => write!(f, "nad"),
-            Self::Mat=> write!(f, "mat"),
-            Self::Aks=> write!(f, "aks"),
+            Self::Mat => write!(f, "mat"),
+            Self::Aks => write!(f, "aks"),
             Self::SeqStart => write!(f, "seq start"),
             Self::SeqEnd => write!(f, "seq end"),
             Self::Literal(s) => write!(f, "ident({})", s),

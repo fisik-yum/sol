@@ -21,7 +21,7 @@ impl<'t> std::fmt::Display for NodeType<'t> {
             NodeType::Nad(u) => write!(f, "Nad({u}m)"),
             NodeType::MatLocal(u) => write!(f, "MatLocal({u})"),
             NodeType::MatGlobal => write!(f, "MatGlobal"),
-            NodeType::Aks=> write!(f, "Aks"),
+            NodeType::Aks => write!(f, "Aks"),
             NodeType::FnCall(s) => write!(f, "FnCall({s})"),
             NodeType::Gap => write!(f, "Gap"),
             NodeType::Figure(n) => write!(f, "Figure({n})"),
