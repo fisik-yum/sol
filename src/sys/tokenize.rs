@@ -6,10 +6,12 @@ use std::{
 };
 
 pub enum Token<'t> {
-    SeqKw,            // keyword `seq`
-    SolKw,            // keyword `sol` (holds root program)
-    TalKw,            // keyword `tal`
-    NadKw,            // keyword `nad`
+    Seq,            // keyword `seq`
+    Sol,            // keyword `sol` (holds root program)
+    Tal,            // keyword `tal`
+    Nad,            // keyword `nad`
+    Mat,            // keyword 'mat'
+    Aks,            // keyword 'aks'
     Literal(&'t str), // a name
     Figure(usize),    //
     SeqStart,         // {
@@ -40,10 +42,12 @@ impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let _ = write!(f, "token ");
         match self {
-            Self::SeqKw => write!(f, "seq"),
-            Self::SolKw => write!(f, "sol"),
-            Self::TalKw=> write!(f, "tal"),
-            Self::NadKw=> write!(f, "nad"),
+            Self::Seq => write!(f, "seq"),
+            Self::Sol => write!(f, "sol"),
+            Self::Tal => write!(f, "tal"),
+            Self::Nad => write!(f, "nad"),
+            Self::Mat=> write!(f, "mat"),
+            Self::Aks=> write!(f, "aks"),
             Self::SeqStart => write!(f, "seq start"),
             Self::SeqEnd => write!(f, "seq end"),
             Self::Literal(s) => write!(f, "ident({})", s),
@@ -121,10 +125,12 @@ fn match_syntax_token<'a>(val: &'a str) -> Token<'a> {
     }
     // for some reason this seems quite dodgy
     match val {
-        "sol" => Token::SolKw,
-        "seq" => Token::SeqKw,
-        "tal" => Token::TalKw,
-        "nad" => Token::NadKw,
+        "sol" => Token::Sol,
+        "seq" => Token::Seq,
+        "tal" => Token::Tal,
+        "nad" => Token::Nad,
+        "mat" => Token::Mat,
+        "aks" => Token::Aks,
         _ => Token::Literal(val),
     }
 }

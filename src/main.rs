@@ -1,5 +1,5 @@
 use clap::Parser;
-use sol::sys::{parser, tokenize};
+use sol::sys::{self, parser, tokenize};
 use std::time;
 use std::{fs, path::Path};
 
@@ -42,6 +42,7 @@ fn main() {
         tree.prettyprint();
     }
 
+    /*
     let size = match sol::calc::mat::count_m(&tree, &tree, &table) {
         Ok(v) => v,
         Err(e) => {
@@ -61,6 +62,8 @@ fn main() {
         };
         println!("tree size: {}", size);
     }
+    */
+    let _ = sys::execute::execute(&tree, &table);
 
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");

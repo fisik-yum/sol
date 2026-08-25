@@ -46,7 +46,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>)
     // set default tal
     if let Some(tal_set) = iter.peek() {
         match tal_set.token() {
-            Token::TalKw => {
+            Token::Tal => {
                 iter.next();
                 let n = parse_tal(iter.by_ref())?;
                 let _ = tree.insert_node(n);
@@ -72,24 +72,35 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>)
     while let Some(span) = iter.peek() {
         let pos = span.start();
         match span.token() {
-            Token::SeqKw => {
+            Token::Seq => {
                 iter.next();
                 let n = parse_seq(iter.by_ref(), &mut stack)?;
                 let id = n.get_name();
                 let idx = tree.insert_node(n);
                 sym_table.insert(id, idx, pos)?;
             }
-            Token::SolKw => {
+            Token::Sol => {
                 return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
             }
-            Token::TalKw => {
+            Token::Tal => {
                 iter.next();
                 let n = parse_tal(iter.by_ref())?;
                 let _ = tree.insert_node(n);
             }
-            Token::NadKw => {
+            Token::Nad => {
                 iter.next();
                 let n = parse_nad(iter.by_ref())?;
+                let _ = tree.insert_node(n);
+            }
+            Token::Mat => {
+                iter.next();
+                let n = parse_mat(iter.by_ref())?;
+                let _ = tree.insert_node(n);
+            }
+            // TODO
+            Token::Aks => {
+                iter.next();
+                let n = parse_aks(iter.by_ref())?;
                 let _ = tree.insert_node(n);
             }
             Token::Literal(s) => {
@@ -144,7 +155,15 @@ fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, ParseEr
         )),
     }
 }
-
+fn parse_expect_sol<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<bool, ParseError> {
+    let span = iter.next().ok_or_else(|| ParseError::eof("expected sol"))?;
+    let pos = span.start();
+    println!("{}",span.token());
+    match span.token() {
+        Token::Sol => Ok(true),
+        other => Err(ParseError::at(pos, format!("expected sol, found {other}"))),
+    }
+}
 fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
     let u = parse_figure(iter)?;
     return Ok(Node::new(NodeType::Tal(u)));
@@ -153,6 +172,28 @@ fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseEr
 fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
     let u = parse_figure(iter)?;
     return Ok(Node::new(NodeType::Nad(u)));
+}
+
+fn parse_mat<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
+    // certainly a bad bit of code
+    let pos = iter
+        .peek()
+        .ok_or_else(|| ParseError::eof("expected identifier"))?
+        .start();
+    if let Ok(u) = parse_ident(iter) {
+        return Ok(Node::new(NodeType::MatLocal(u)));
+    }
+    if parse_expect_sol(iter).unwrap_or(false) {
+        return Ok(Node::new(NodeType::MatGlobal));
+    }
+    println!("err");
+    return Err(ParseError::at(
+        pos,
+        "expected either an identifier or global keyword 'sol' as argument",
+    ));
+}
+fn parse_aks<'a>(_iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
+    return Ok(Node::new(NodeType::Aks));
 }
 #[derive(Clone, Copy)]
 enum BodyKind {
@@ -169,9 +210,6 @@ impl BodyKind {
     }
 }
 
-// shared token dispatch for sequence and gap bodies; they accept the same
-// tokens (figures and, inside a sequence, nested gaps) and reject everything
-// else with a context-specific message.
 fn parse_body<'a>(
     iter: &mut Peekable<Tokenizer<'a>>,
     stack: &mut FrameStack,
@@ -181,22 +219,34 @@ fn parse_body<'a>(
     while let Some(span) = iter.peek() {
         let pos = span.start();
         match span.token() {
-            Token::SeqKw => {
+            Token::Seq => {
                 return Err(ParseError::at(pos, "cannot nest a sequence definition"));
             }
-            Token::SolKw => {
+            Token::Sol => {
                 return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
             }
-            Token::TalKw => {
+            Token::Tal => {
                 return Err(ParseError::at(
                     pos,
                     format!("cannot invoke 'tal' inside {}", kind.name()),
                 ));
             }
-            Token::NadKw => {
+            Token::Nad => {
                 return Err(ParseError::at(
                     pos,
                     format!("cannot invoke 'nad' inside {}", kind.name()),
+                ));
+            }
+            Token::Mat => {
+                return Err(ParseError::at(
+                    pos,
+                    format!("cannot invoke 'mat' inside {}", kind.name()),
+                ));
+            }
+            Token::Aks => {
+                return Err(ParseError::at(
+                    pos,
+                    format!("cannot invoke 'aks' inside {}", kind.name()),
                 ));
             }
             Token::Literal(s) => {

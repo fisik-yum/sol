@@ -59,4 +59,6 @@ talam and nadai respectively. tal is a procedure that
 annotates the length of one talam cycle (as akshara), while 
 nad annotates the value of one akshara (in maatirai).
 
-It is worth noting that tal cannot be invoked inside a container.
+It is worth noting that both annotations cannot be invoked 
+inside a container. This is to avoid unnecessary design 
+cases when it comes to the execution engine.

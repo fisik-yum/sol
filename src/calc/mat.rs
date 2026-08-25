@@ -1,5 +1,6 @@
-use crate::sys::{ast, parser};
+use crate::sys::ast::Node;
 use crate::sys::warnings::ParseError;
+use crate::sys::{ast, parser};
 use talm::unit::Mathrai;
 
 pub fn count_m(
@@ -49,5 +50,14 @@ pub fn size_helper(
         }
         _ => res = Mathrai(0),
     }
+    Ok(res)
+}
+
+pub fn seq_count_m(
+    head: &ast::Node,
+    root: &ast::Node,
+    symbols: &parser::SymbolTable,
+) -> Result<Mathrai, ParseError> {
+    let res = size_helper(head, root, symbols, true)?;
     Ok(res)
 }
