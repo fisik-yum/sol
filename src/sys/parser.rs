@@ -158,7 +158,7 @@ fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, ParseEr
 fn parse_expect_sol<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<bool, ParseError> {
     let span = iter.next().ok_or_else(|| ParseError::eof("expected sol"))?;
     let pos = span.start();
-    println!("{}",span.token());
+    println!("{}", span.token());
     match span.token() {
         Token::Sol => Ok(true),
         other => Err(ParseError::at(pos, format!("expected sol, found {other}"))),
@@ -180,17 +180,14 @@ fn parse_mat<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseEr
         .peek()
         .ok_or_else(|| ParseError::eof("expected identifier"))?
         .start();
-    if let Ok(u) = parse_ident(iter) {
-        return Ok(Node::new(NodeType::MatLocal(u)));
+    match iter.next().unwrap().token() {
+        Token::Literal(u) => Ok(Node::new(NodeType::MatLocal(u))),
+        Token::Sol => Ok(Node::new(NodeType::MatGlobal)),
+        _ => Err(ParseError::at(
+            pos,
+            "expected either an identifier or global keyword 'sol' as argument",
+        )),
     }
-    if parse_expect_sol(iter).unwrap_or(false) {
-        return Ok(Node::new(NodeType::MatGlobal));
-    }
-    println!("err");
-    return Err(ParseError::at(
-        pos,
-        "expected either an identifier or global keyword 'sol' as argument",
-    ));
 }
 fn parse_aks<'a>(_iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
     return Ok(Node::new(NodeType::Aks));
