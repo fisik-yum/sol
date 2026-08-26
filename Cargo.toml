@@ -3,7 +3,8 @@ name = "sol"
 version = "0.1.0"
 license = "AGPL 3.0"
 edition = "2024"
-
+[lints.clippy] # Use [lints.clippy] if not in a workspace
+panic = "deny"
 [dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
 talm = { path = "../talm"}

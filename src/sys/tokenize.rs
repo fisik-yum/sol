@@ -77,11 +77,34 @@ impl<'a> Tokenizer<'a> {
             }
         }
     }
+    fn skip_comments(&mut self) -> bool {
+        if let Some(&(i, _)) = self.chars.peek() {
+            if self.source[i..].starts_with("//") {
+                self.chars.next();
+                self.chars.next();
+                while let Some(&(_, c)) = self.chars.peek() {
+                    if c == '\n' || c == '\r' {
+                        self.chars.next();
+                        break;
+                    } else {
+                        self.chars.next();
+                    }
+                }
+                return true;
+            }
+        }
+        false
+    }
 }
 impl<'a> Iterator for Tokenizer<'a> {
     type Item = SpanToken<'a>;
     fn next(&mut self) -> Option<Self::Item> {
-        self.skip_whitespace();
+        loop {
+            self.skip_whitespace();
+            if !self.skip_comments() {
+                break;
+            }
+        }
 
         let (start, first_char) = *self.chars.peek()?;
 

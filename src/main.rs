@@ -1,8 +1,7 @@
 use clap::Parser;
-use sol::sys::{self, parser, tokenize};
+use sol::sys::{parser, tokenize};
 use std::time;
 use std::{fs, path::Path};
-
 #[derive(Parser, Debug)]
 #[command(version, about="command-line solkattu verification program", long_about = None)]
 struct Args {

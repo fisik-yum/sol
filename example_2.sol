@@ -1,3 +1,4 @@
+// sol example: samam to 1/2 edam adi
 tal 8
 seq P {
     4 (4)
