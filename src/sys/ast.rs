@@ -1,76 +1,86 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NodeType<'t> {
-    Root,
+pub enum ASTNode<'t> {
+    Root(Vec<Self>),
     Tal(usize),
     Nad(usize),
     MatLocal(&'t str),
     MatGlobal,
     Aks,
-    Sequence(&'t str),
+    Sequence(&'t str, Vec<Self>),
     FnCall(&'t str),
-    Gap,
+    Gap(Vec<Self>),
     Figure(usize),
 }
 
-impl<'t> std::fmt::Display for NodeType<'t> {
+impl<'t> std::fmt::Display for ASTNode<'t> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NodeType::Root => write!(f, "Root"),
-            NodeType::Sequence(s) => write!(f, "Sequence({s})"),
-            NodeType::Tal(u) => write!(f, "Tal({u}a)"),
-            NodeType::Nad(u) => write!(f, "Nad({u}m)"),
-            NodeType::MatLocal(u) => write!(f, "MatLocal({u})"),
-            NodeType::MatGlobal => write!(f, "MatGlobal"),
-            NodeType::Aks => write!(f, "Aks"),
-            NodeType::FnCall(s) => write!(f, "FnCall({s})"),
-            NodeType::Gap => write!(f, "Gap"),
-            NodeType::Figure(n) => write!(f, "Figure({n})"),
+            ASTNode::Root(_) => write!(f, ""),
+            ASTNode::Sequence(s, _) => write!(f, "seq {s}"),
+            ASTNode::Tal(u) => write!(f, "tal {u}"),
+            ASTNode::Nad(u) => write!(f, "nad {u}"),
+            ASTNode::MatLocal(u) => write!(f, "mat {u}"),
+            ASTNode::MatGlobal => write!(f, "mat sol"),
+            ASTNode::Aks => write!(f, "aks"),
+            ASTNode::FnCall(s) => write!(f, "{s}"),
+            ASTNode::Gap(_) => write!(f, "gap"),
+            ASTNode::Figure(n) => write!(f, "{n}"),
         }
     }
 }
 
-pub struct Node<'n> {
-    pub node_type: NodeType<'n>,
-    pub children: Option<Vec<Node<'n>>>,
-}
-
-impl<'n> Node<'n> {
-    pub fn new(node_type: NodeType<'n>) -> Self {
-        return Self {
-            node_type,
-            children: Some(vec![]),
-        };
-    }
-
-    pub fn insert_node(&mut self, n: Node<'n>) -> usize {
-        let ch = self.children.get_or_insert_with(Vec::new);
-        ch.push(n);
-        ch.len() - 1
-    }
-
-    pub fn get_name(&self) -> &'n str {
-        match self.node_type {
-            NodeType::Sequence(s) => s,
-            _ => panic!("get_name called on a non-Sequence node: {}", self.node_type),
-        }
-    }
-    pub fn prettyprint(&self) {
-        self.dfs("", true);
-    }
-
-    fn dfs(&self, prefix: &str, is_last: bool) {
-        let connector = if is_last { "\\_" } else { "|- " };
-
-        println!("{prefix}{connector}{}", self.node_type);
-
-        let child_prefix = format!("{prefix}{}", if is_last { "    " } else { "|    " });
-
-        if let Some(children) = &self.children {
-            let count = children.len();
-            for (i, child) in children.iter().enumerate() {
-                let is_last_child = i == count - 1;
-                child.dfs(&child_prefix, is_last_child);
+impl<'n> ASTNode<'n> {
+    pub fn insert_node(&mut self, n: ASTNode<'n>) -> usize {
+        match self {
+            ASTNode::Root(v) => {
+                v.push(n);
+                v.len() - 1
+            }
+            ASTNode::Sequence(_, v) => {
+                v.push(n);
+                v.len() - 1
+            }
+            ASTNode::Gap(v) => {
+                v.push(n);
+                v.len() - 1
+            }
+            _ => {
+                panic!("unexpected behavior")
             }
         }
     }
+
+    pub fn get_children(&self) -> &Vec<Self> {
+        match self {
+            ASTNode::Sequence(_, v) => v,
+            ASTNode::Root(v) => v,
+            ASTNode::Gap(v) => v,
+            _ => panic!("get_children called on a non-Sequence node: {}", self),
+        }
+    }
+    pub fn get_name(&self) -> &'n str {
+        match self {
+            ASTNode::Sequence(s, _) => s,
+            _ => panic!("get_name called on a non-Sequence node: {}", self),
+        }
+    }
+    // pub fn prettyprint(&self) {
+    //     self.dfs("", true);
+    // }
+
+    // fn dfs(&self, prefix: &str, is_last: bool) {
+    //     let connector = if is_last { "\\_" } else { "|- " };
+
+    //     println!("{prefix}{connector}{}", self.node_type);
+
+    //     let child_prefix = format!("{prefix}{}", if is_last { "    " } else { "|    " });
+
+    //     if let Some(children) = &self.children {
+    //         let count = children.len();
+    //         for (i, child) in children.iter().enumerate() {
+    //             let is_last_child = i == count - 1;
+    //             child.dfs(&child_prefix, is_last_child);
+    //         }
+    //     }
+    // }
 }

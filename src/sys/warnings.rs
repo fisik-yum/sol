@@ -1,9 +1,9 @@
-pub struct ParseError {
+pub struct Error {
     pos: Option<usize>,
     msg: String,
 }
 
-impl ParseError {
+impl Error {
     pub fn at(pos: usize, msg: impl Into<String>) -> Self {
         Self {
             pos: Some(pos),

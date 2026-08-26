@@ -39,7 +39,8 @@ fn main() {
     };
 
     if args.tree {
-        tree.prettyprint();
+        //tree.prettyprint();
+        println!("tree printing disabled")
     }
 
     /*

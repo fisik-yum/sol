@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::Peekable;
 
-use crate::sys::ast::{Node, NodeType};
+use crate::sys::ast::ASTNode;
 use crate::sys::tokenize::{Token, Tokenizer};
-use crate::sys::warnings::ParseError;
+use crate::sys::warnings::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Frame {
@@ -35,12 +35,12 @@ impl FrameStack {
     }
 }
 
-pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>), ParseError> {
+pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(ASTNode<'p>, SymbolTable<'p>), Error> {
     // builds an AST object
     let mut tok_stream = tokenizer.peekable();
     let iter = tok_stream.by_ref();
     let mut stack = FrameStack { stack: Vec::new() };
-    let mut tree = Node::new(NodeType::Root);
+    let mut tree = ASTNode::Root(vec![]);
     let mut sym_table = SymbolTable::new();
 
     // set default tal
@@ -53,19 +53,16 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>)
             }
             _ => {
                 let pos = tal_set.start();
-                return Err(ParseError::at(
-                    pos,
-                    "Expected tal decl at beginning of file",
-                ));
+                return Err(Error::at(pos, "Expected tal decl at beginning of file"));
             }
         }
     } else {
         // NOTE: is this normal behavior?
-        return Err(ParseError::at(0, "Expected tal decl at beginning of file"));
+        return Err(Error::at(0, "Expected tal decl at beginning of file"));
     }
 
     // insert default nad node
-    tree.insert_node(Node::new(NodeType::Nad(4)));
+    tree.insert_node(ASTNode::Nad(4));
     // in the future we may want something more intelligent
     // this can be immediately overriden, btw.
 
@@ -80,7 +77,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>)
                 sym_table.insert(id, idx, pos)?;
             }
             Token::Sol => {
-                return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
+                return Err(Error::at(pos, "use of restricted keyword 'sol'"));
             }
             Token::Tal => {
                 iter.next();
@@ -104,93 +101,88 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(Node<'p>, SymbolTable<'p>)
                 let _ = tree.insert_node(n);
             }
             Token::Literal(s) => {
-                tree.insert_node(Node::new(NodeType::FnCall(*s)));
+                tree.insert_node(ASTNode::FnCall(*s));
                 iter.next();
             }
             Token::Figure(u) => {
-                tree.insert_node(Node::new(NodeType::Figure(*u)));
+                tree.insert_node(ASTNode::Figure(*u));
                 iter.next();
             }
             Token::SeqStart => {
-                return Err(ParseError::at(pos, "unexpected '{' (anonymous sequence)"));
+                return Err(Error::at(pos, "unexpected '{' (anonymous sequence)"));
             }
             Token::SeqEnd => {
-                return Err(ParseError::at(pos, "unexpected '}' (no matching sequence)"));
+                return Err(Error::at(pos, "unexpected '}' (no matching sequence)"));
             }
             Token::GapStart => {
                 let n = parse_gap(iter.by_ref(), &mut stack)?;
                 tree.insert_node(n);
             }
             Token::GapEnd => {
-                return Err(ParseError::at(pos, "unexpected ')' (no matching gap)"));
+                return Err(Error::at(pos, "unexpected ')' (no matching gap)"));
             }
         }
     }
     Ok((tree, sym_table))
 }
 
-fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, ParseError> {
+fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, Error> {
     let span = iter
         .next()
-        .ok_or_else(|| ParseError::eof("expected an identifier"))?;
+        .ok_or_else(|| Error::eof("expected an identifier"))?;
     let pos = span.start();
     match span.token() {
         Token::Literal(s) => Ok(s),
-        other => Err(ParseError::at(
+        other => Err(Error::at(
             pos,
             format!("expected an identifier, found {other}"),
         )),
     }
 }
-fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, ParseError> {
-    let span = iter
-        .next()
-        .ok_or_else(|| ParseError::eof("expected a figure"))?;
+fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, Error> {
+    let span = iter.next().ok_or_else(|| Error::eof("expected a figure"))?;
     let pos = span.start();
     match span.token() {
         Token::Figure(u) => Ok(*u),
-        other => Err(ParseError::at(
-            pos,
-            format!("expected an figure, found {other}"),
-        )),
+        other => Err(Error::at(pos, format!("expected an figure, found {other}"))),
     }
 }
-fn parse_expect_sol<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<bool, ParseError> {
-    let span = iter.next().ok_or_else(|| ParseError::eof("expected sol"))?;
+fn parse_expect_sol<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<bool, Error> {
+    let span = iter.next().ok_or_else(|| Error::eof("expected sol"))?;
     let pos = span.start();
     println!("{}", span.token());
     match span.token() {
         Token::Sol => Ok(true),
-        other => Err(ParseError::at(pos, format!("expected sol, found {other}"))),
+        other => Err(Error::at(pos, format!("expected sol, found {other}"))),
     }
 }
-fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
+fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
     let u = parse_figure(iter)?;
-    return Ok(Node::new(NodeType::Tal(u)));
+    return Ok(ASTNode::Tal(u));
 }
 
-fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
+fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
     let u = parse_figure(iter)?;
-    return Ok(Node::new(NodeType::Nad(u)));
+    return Ok(ASTNode::Nad(u));
 }
 
-fn parse_mat<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
+fn parse_mat<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
     // certainly a bad bit of code
     let pos = iter
         .peek()
-        .ok_or_else(|| ParseError::eof("expected identifier"))?
+        .ok_or_else(|| Error::eof("expected identifier"))?
         .start();
     match iter.next().unwrap().token() {
-        Token::Literal(u) => Ok(Node::new(NodeType::MatLocal(u))),
-        Token::Sol => Ok(Node::new(NodeType::MatGlobal)),
-        _ => Err(ParseError::at(
+        Token::Literal(u) => Ok(ASTNode::MatLocal(u)),
+        Token::Sol => Ok(ASTNode::MatGlobal),
+        _ => Err(Error::at(
             pos,
             "expected either an identifier or global keyword 'sol' as argument",
         )),
     }
 }
-fn parse_aks<'a>(_iter: &mut Peekable<Tokenizer<'a>>) -> Result<Node<'a>, ParseError> {
-    return Ok(Node::new(NodeType::Aks));
+fn parse_aks<'a>(_iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
+    return Ok(ASTNode::Aks);
 }
 #[derive(Clone, Copy)]
 enum BodyKind {
@@ -211,53 +203,53 @@ fn parse_body<'a>(
     iter: &mut Peekable<Tokenizer<'a>>,
     stack: &mut FrameStack,
     kind: BodyKind,
-    target: &mut Node<'a>,
-) -> Result<(), ParseError> {
+    target: &mut ASTNode<'a>,
+) -> Result<(), Error> {
     while let Some(span) = iter.peek() {
         let pos = span.start();
         match span.token() {
             Token::Seq => {
-                return Err(ParseError::at(pos, "cannot nest a sequence definition"));
+                return Err(Error::at(pos, "cannot nest a sequence definition"));
             }
             Token::Sol => {
-                return Err(ParseError::at(pos, "use of restricted keyword 'sol'"));
+                return Err(Error::at(pos, "use of restricted keyword 'sol'"));
             }
             Token::Tal => {
-                return Err(ParseError::at(
+                return Err(Error::at(
                     pos,
                     format!("cannot invoke 'tal' inside {}", kind.name()),
                 ));
             }
             Token::Nad => {
-                return Err(ParseError::at(
+                return Err(Error::at(
                     pos,
                     format!("cannot invoke 'nad' inside {}", kind.name()),
                 ));
             }
             Token::Mat => {
-                return Err(ParseError::at(
+                return Err(Error::at(
                     pos,
                     format!("cannot invoke 'mat' inside {}", kind.name()),
                 ));
             }
             Token::Aks => {
-                return Err(ParseError::at(
+                return Err(Error::at(
                     pos,
                     format!("cannot invoke 'aks' inside {}", kind.name()),
                 ));
             }
             Token::Literal(s) => {
-                return Err(ParseError::at(
+                return Err(Error::at(
                     pos,
                     format!("cannot call '{s}' inside {}", kind.name()),
                 ));
             }
             Token::Figure(u) => {
-                target.insert_node(Node::new(NodeType::Figure(*u)));
+                target.insert_node(ASTNode::Figure(*u));
                 iter.next();
             }
             Token::SeqStart => {
-                return Err(ParseError::at(pos, "unexpected '{' (anonymous sequence)"));
+                return Err(Error::at(pos, "unexpected '{' (anonymous sequence)"));
             }
             Token::SeqEnd => match kind {
                 BodyKind::Seq => {
@@ -266,11 +258,11 @@ fn parse_body<'a>(
                         stack.pop_last();
                         return Ok(());
                     } else {
-                        return Err(ParseError::at(pos, "unmatched '}'"));
+                        return Err(Error::at(pos, "unmatched '}'"));
                     }
                 }
                 BodyKind::Gap => {
-                    return Err(ParseError::at(pos, "unopened sequence block"));
+                    return Err(Error::at(pos, "unopened sequence block"));
                 }
             },
             Token::GapStart => match kind {
@@ -279,7 +271,7 @@ fn parse_body<'a>(
                     target.insert_node(n);
                 }
                 BodyKind::Gap => {
-                    return Err(ParseError::at(pos, "cannot nest gaps"));
+                    return Err(Error::at(pos, "cannot nest gaps"));
                 }
             },
             Token::GapEnd => match kind {
@@ -289,11 +281,11 @@ fn parse_body<'a>(
                         stack.pop_last();
                         return Ok(());
                     } else {
-                        return Err(ParseError::at(pos, "unmatched ')'"));
+                        return Err(Error::at(pos, "unmatched ')'"));
                     }
                 }
                 BodyKind::Seq => {
-                    return Err(ParseError::at(pos, "unexpected ')' (no matching gap)"));
+                    return Err(Error::at(pos, "unexpected ')' (no matching gap)"));
                 }
             },
         }
@@ -305,18 +297,18 @@ fn parse_body<'a>(
 fn parse_seq<'a>(
     iter: &mut Peekable<Tokenizer<'a>>,
     stack: &mut FrameStack,
-) -> Result<Node<'a>, ParseError> {
+) -> Result<ASTNode<'a>, Error> {
     let name = parse_ident(iter.by_ref())?;
-    let mut ret = Node::new(NodeType::Sequence(name));
+    let mut ret = ASTNode::Sequence(name, vec![]);
     let sp1 = iter
         .next()
-        .ok_or_else(|| ParseError::eof("expected '{' after sequence name"))?;
+        .ok_or_else(|| Error::eof("expected '{' after sequence name"))?;
     match sp1.token() {
         Token::SeqStart => {
             stack.add_frame(Frame::Seq);
         }
         other => {
-            return Err(ParseError::at(
+            return Err(Error::at(
                 sp1.start(),
                 format!("expected '{{' after sequence name, found {other}"),
             ));
@@ -329,17 +321,17 @@ fn parse_seq<'a>(
 fn parse_gap<'a>(
     iter: &mut Peekable<Tokenizer<'a>>,
     stack: &mut FrameStack,
-) -> Result<Node<'a>, ParseError> {
-    let mut ret = Node::new(NodeType::Gap);
+) -> Result<ASTNode<'a>, Error> {
+    let mut ret = ASTNode::Gap(vec![]);
     let sp1 = iter
         .next()
-        .ok_or_else(|| ParseError::eof("expected '(' to start a gap"))?;
+        .ok_or_else(|| Error::eof("expected '(' to start a gap"))?;
     match sp1.token() {
         Token::GapStart => {
             stack.add_frame(Frame::Gap);
         }
         other => {
-            return Err(ParseError::at(
+            return Err(Error::at(
                 sp1.start(),
                 format!("expected '(' to start a gap, found {other}"),
             ));
@@ -358,19 +350,19 @@ impl<'a> SymbolTable<'a> {
             table: HashMap::new(),
         }
     }
-    pub fn insert(&mut self, k: &'a str, idx: usize, pos: usize) -> Result<(), ParseError> {
+    pub fn insert(&mut self, k: &'a str, idx: usize, pos: usize) -> Result<(), Error> {
         if self.table.contains_key(k) {
-            return Err(ParseError::at(pos, format!("sequence redefined: {k}")));
+            return Err(Error::at(pos, format!("sequence redefined: {k}")));
         }
         self.table.insert(k, idx);
         Ok(())
     }
 
-    pub fn get(&self, k: &'a str) -> Result<usize, ParseError> {
+    pub fn get(&self, k: &'a str) -> Result<usize, Error> {
         self.table
             .get(k)
             .copied()
-            .ok_or_else(|| ParseError::global(format!("undefined sequence: {k}")))
+            .ok_or_else(|| Error::global(format!("undefined sequence: {k}")))
     }
 }
 
