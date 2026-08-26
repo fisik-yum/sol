@@ -36,7 +36,7 @@ pub fn count_a(
             }
             ASTNode::FnCall(s) => {
                 let pos = symbol_table.get(s)?;
-                let target_fn_node = &n.get_children()[pos];
+                let target_fn_node = &chld[pos];
                 let mc = size_helper(target_fn_node, root, symbol_table, true)?;
                 accumulator = accumulator + mc;
             }

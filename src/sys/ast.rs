@@ -3,9 +3,6 @@ pub enum ASTNode<'t> {
     Root(Vec<Self>),
     Tal(usize),
     Nad(usize),
-    MatLocal(&'t str),
-    MatGlobal,
-    Aks,
     Sequence(&'t str, Vec<Self>),
     FnCall(&'t str),
     Gap(Vec<Self>),
@@ -19,9 +16,6 @@ impl<'t> std::fmt::Display for ASTNode<'t> {
             ASTNode::Sequence(s, _) => write!(f, "seq {s}"),
             ASTNode::Tal(u) => write!(f, "tal {u}"),
             ASTNode::Nad(u) => write!(f, "nad {u}"),
-            ASTNode::MatLocal(u) => write!(f, "mat {u}"),
-            ASTNode::MatGlobal => write!(f, "mat sol"),
-            ASTNode::Aks => write!(f, "aks"),
             ASTNode::FnCall(s) => write!(f, "{s}"),
             ASTNode::Gap(_) => write!(f, "gap"),
             ASTNode::Figure(n) => write!(f, "{n}"),
@@ -64,23 +58,40 @@ impl<'n> ASTNode<'n> {
             _ => panic!("get_name called on a non-Sequence node: {}", self),
         }
     }
-    // pub fn prettyprint(&self) {
-    //     self.dfs("", true);
-    // }
+    pub fn prettyprint(&self) {
+        self.dfs("", true);
+    }
 
-    // fn dfs(&self, prefix: &str, is_last: bool) {
-    //     let connector = if is_last { "\\_" } else { "|- " };
+    fn dfs(&self, prefix: &str, is_last: bool) {
+        let connector = if is_last { "\\_" } else { "|- " };
 
-    //     println!("{prefix}{connector}{}", self.node_type);
+        println!("{prefix}{connector}{}", self);
 
-    //     let child_prefix = format!("{prefix}{}", if is_last { "    " } else { "|    " });
+        let child_prefix = format!("{prefix}{}", if is_last { "    " } else { "|    " });
 
-    //     if let Some(children) = &self.children {
-    //         let count = children.len();
-    //         for (i, child) in children.iter().enumerate() {
-    //             let is_last_child = i == count - 1;
-    //             child.dfs(&child_prefix, is_last_child);
-    //         }
-    //     }
-    // }
+        match self {
+            ASTNode::Root(v) => {
+                let count = v.len();
+                for (i, child) in v.iter().enumerate() {
+                    let is_last_child = i == count - 1;
+                    child.dfs(&child_prefix, is_last_child);
+                }
+            }
+            ASTNode::Sequence(_, v) => {
+                let count = v.len();
+                for (i, child) in v.iter().enumerate() {
+                    let is_last_child = i == count - 1;
+                    child.dfs(&child_prefix, is_last_child);
+                }
+            }
+            ASTNode::Gap(v) => {
+                let count = v.len();
+                for (i, child) in v.iter().enumerate() {
+                    let is_last_child = i == count - 1;
+                    child.dfs(&child_prefix, is_last_child);
+                }
+            }
+            _ => {}
+        }
+    }
 }

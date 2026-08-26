@@ -89,17 +89,6 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(ASTNode<'p>, SymbolTable<'
                 let n = parse_nad(iter.by_ref())?;
                 let _ = tree.insert_node(n);
             }
-            Token::Mat => {
-                iter.next();
-                let n = parse_mat(iter.by_ref())?;
-                let _ = tree.insert_node(n);
-            }
-            // TODO
-            Token::Aks => {
-                iter.next();
-                let n = parse_aks(iter.by_ref())?;
-                let _ = tree.insert_node(n);
-            }
             Token::Literal(s) => {
                 tree.insert_node(ASTNode::FnCall(*s));
                 iter.next();
@@ -165,25 +154,6 @@ fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Erro
     let u = parse_figure(iter)?;
     return Ok(ASTNode::Nad(u));
 }
-
-fn parse_mat<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
-    // certainly a bad bit of code
-    let pos = iter
-        .peek()
-        .ok_or_else(|| Error::eof("expected identifier"))?
-        .start();
-    match iter.next().unwrap().token() {
-        Token::Literal(u) => Ok(ASTNode::MatLocal(u)),
-        Token::Sol => Ok(ASTNode::MatGlobal),
-        _ => Err(Error::at(
-            pos,
-            "expected either an identifier or global keyword 'sol' as argument",
-        )),
-    }
-}
-fn parse_aks<'a>(_iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
-    return Ok(ASTNode::Aks);
-}
 #[derive(Clone, Copy)]
 enum BodyKind {
     Seq,
@@ -224,18 +194,6 @@ fn parse_body<'a>(
                 return Err(Error::at(
                     pos,
                     format!("cannot invoke 'nad' inside {}", kind.name()),
-                ));
-            }
-            Token::Mat => {
-                return Err(Error::at(
-                    pos,
-                    format!("cannot invoke 'mat' inside {}", kind.name()),
-                ));
-            }
-            Token::Aks => {
-                return Err(Error::at(
-                    pos,
-                    format!("cannot invoke 'aks' inside {}", kind.name()),
                 ));
             }
             Token::Literal(s) => {

@@ -1,12 +1,24 @@
 sol - documentation
 ===================
 
-1. INTRO
+1a. INTRO.
 ----------
 sol is a command-line program to describe 
 percussion solkattu. It is styled as a 
 declarative language with with the capacity 
 to process stored procedures.
+
+Primarily, the goal of this system is to 
+describe and verify sequences. This means 
+that there will be near to no extensions to
+syntax for control flow constructs.
+
+1b. INVOCATION.
+---------------
+Invocation of the runtime is quite simple. 
+The argument 'f' supplies a sol file to the 
+engine, while arguments 'm' and 'a' print 
+out statistics.
 
 2. SYNTAX.
 ----------

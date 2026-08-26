@@ -10,8 +10,6 @@ pub enum Token<'t> {
     Sol,              // keyword `sol` (holds root program)
     Tal,              // keyword `tal`
     Nad,              // keyword `nad`
-    Mat,              // keyword 'mat'
-    Aks,              // keyword 'aks'
     Literal(&'t str), // a name
     Figure(usize),    //
     SeqStart,         // {
@@ -46,8 +44,6 @@ impl std::fmt::Display for Token<'_> {
             Self::Sol => write!(f, "sol"),
             Self::Tal => write!(f, "tal"),
             Self::Nad => write!(f, "nad"),
-            Self::Mat => write!(f, "mat"),
-            Self::Aks => write!(f, "aks"),
             Self::SeqStart => write!(f, "seq start"),
             Self::SeqEnd => write!(f, "seq end"),
             Self::Literal(s) => write!(f, "ident({})", s),
@@ -129,8 +125,6 @@ fn match_syntax_token<'a>(val: &'a str) -> Token<'a> {
         "seq" => Token::Seq,
         "tal" => Token::Tal,
         "nad" => Token::Nad,
-        "mat" => Token::Mat,
-        "aks" => Token::Aks,
         _ => Token::Literal(val),
     }
 }

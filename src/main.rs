@@ -4,17 +4,30 @@ use std::time;
 use std::{fs, path::Path};
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about="command-line solkattu verification program", long_about = None)]
 struct Args {
     #[arg(short = 'f', long = "file")]
     f: String,
 
     // print tree
-    #[arg(long, default_value_t = false)]
+    #[arg(short = 't', long, default_value_t = false, help = "print parse tree")]
     tree: bool,
 
+    // print mathrai count
+    #[arg(
+        short = 'm',
+        long,
+        default_value_t = false,
+        help = "print cumulative mathrai count"
+    )]
+    mat: bool,
     // print akshara count
-    #[arg(long, default_value_t = false)]
+    #[arg(
+        short = 'a',
+        long,
+        default_value_t = false,
+        help = "print cumulative + relative akshara count"
+    )]
     aksh: bool,
 }
 fn main() {
@@ -38,20 +51,21 @@ fn main() {
         }
     };
 
+    // ARG HANDLING CODE
     if args.tree {
-        //tree.prettyprint();
-        println!("tree printing disabled")
+        tree.prettyprint();
     }
 
-    /*
-    let size = match sol::calc::mat::count_m(&tree, &tree, &table) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("{}", e.report(&loc, &t));
-            std::process::exit(1);
-        }
-    };
-    println!("parse size: {}", size);
+    if args.mat {
+        let size = match sol::calc::mat::count_m(&tree, &tree, &table) {
+            Ok(v) => v,
+            Err(e) => {
+                eprintln!("{}", e.report(&loc, &t));
+                std::process::exit(1);
+            }
+        };
+        println!("parse size: {}", size);
+    }
 
     if args.aksh {
         let size = match sol::calc::aks::count_a(&tree, &table) {
@@ -63,8 +77,7 @@ fn main() {
         };
         println!("tree size: {}", size);
     }
-    */
-    let _ = sys::execute::execute(&tree, &table);
+    //let _ = sys::execute::execute(&tree, &table);
 
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");
