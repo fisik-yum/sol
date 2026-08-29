@@ -5,6 +5,7 @@ use std::iter::Peekable;
 use crate::sys::ast::ASTNode;
 use crate::sys::tokenize::{Token, Tokenizer};
 use crate::sys::warnings::Error;
+use crate::sys::{Program, SymbolTable};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Frame {
@@ -35,7 +36,7 @@ impl FrameStack {
     }
 }
 
-pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(ASTNode<'p>, SymbolTable<'p>), Error> {
+pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
     // builds an AST object
     let mut tok_stream = tokenizer.peekable();
     let iter = tok_stream.by_ref();
@@ -112,7 +113,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<(ASTNode<'p>, SymbolTable<'
             }
         }
     }
-    Ok((tree, sym_table))
+    Ok(Program::new(tree, sym_table, HashMap::new()))
 }
 
 fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, Error> {
@@ -136,15 +137,7 @@ fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, Error> 
         other => Err(Error::at(pos, format!("expected an figure, found {other}"))),
     }
 }
-fn parse_expect_sol<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<bool, Error> {
-    let span = iter.next().ok_or_else(|| Error::eof("expected sol"))?;
-    let pos = span.start();
-    println!("{}", span.token());
-    match span.token() {
-        Token::Sol => Ok(true),
-        other => Err(Error::at(pos, format!("expected sol, found {other}"))),
-    }
-}
+
 fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
     let u = parse_figure(iter)?;
     return Ok(ASTNode::Tal(u));
@@ -297,35 +290,4 @@ fn parse_gap<'a>(
     };
     parse_body(iter, stack, BodyKind::Gap, &mut ret)?;
     Ok(ret)
-}
-pub struct SymbolTable<'a> {
-    pub table: HashMap<&'a str, usize>,
-}
-
-impl<'a> SymbolTable<'a> {
-    pub fn new() -> Self {
-        Self {
-            table: HashMap::new(),
-        }
-    }
-    pub fn insert(&mut self, k: &'a str, idx: usize, pos: usize) -> Result<(), Error> {
-        if self.table.contains_key(k) {
-            return Err(Error::at(pos, format!("sequence redefined: {k}")));
-        }
-        self.table.insert(k, idx);
-        Ok(())
-    }
-
-    pub fn get(&self, k: &'a str) -> Result<usize, Error> {
-        self.table
-            .get(k)
-            .copied()
-            .ok_or_else(|| Error::global(format!("undefined sequence: {k}")))
-    }
-}
-
-impl std::fmt::Display for SymbolTable<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.table.fmt(f)
-    }
 }

@@ -42,7 +42,7 @@ fn main() {
 
     let tokenizer = tokenize::Tokenizer::from(t.as_str());
 
-    let (tree, table) = match parser::parse(tokenizer) {
+    let prog = match parser::parse(tokenizer) {
         Ok(v) => v,
         Err(e) => {
             eprintln!("{}", e.report(&loc, &t));
@@ -52,31 +52,30 @@ fn main() {
 
     // ARG HANDLING CODE
     if args.tree {
-        tree.prettyprint();
+        &prog.root.prettyprint();
     }
 
     if args.mat {
-        let size = match sol::calc::mat::count_m(&tree, &tree, &table) {
+        let size = match prog.mathrai_count() {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e.report(&loc, &t));
                 std::process::exit(1);
             }
         };
-        println!("parse size: {}", size);
+        println!("Mathrai: {}", size);
     }
 
     if args.aksh {
-        let size = match sol::calc::aks::count_a(&tree, &table) {
+        let size = match sol::sys::stdlib::aks::count_a(&prog.root, &prog.symbols) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e.report(&loc, &t));
                 std::process::exit(1);
             }
         };
-        println!("tree size: {}", size);
+        println!("PartialAks: {}", size);
     }
-    //let _ = sys::execute::execute(&tree, &table);
 
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");

@@ -1,26 +1,21 @@
-use crate::{
-    calc::mat::{count_m, size_helper},
-    sys::ast::{self, ASTNode},
-    sys::parser,
-    sys::warnings::Error,
-};
+use crate::sys::{self, ast::{self, ASTNode}, stdlib::mat, warnings::Error};
 use talm::aks::*;
 use talm::unit::Mathrai;
 
 pub fn count_a(
     root: &ast::ASTNode,
-    symbol_table: &parser::SymbolTable,
+    symbol_table: &sys::SymbolTable,
 ) -> Result<StandardAkshara, Error> {
     let mut ret = StandardAkshara {
         count: 0,
         edam: Carry { num: 0, den: 4 },
     };
     let mut accumulator = Mathrai(0);
-    let chld = root.get_children();
+    let child = root.get_children();
 
     let mut curr_nad = Mathrai(4);
 
-    for n in chld {
+    for n in child {
         match n {
             ASTNode::Nad(u) => {
                 ret = ret + StandardAkshara::from_mathrai(accumulator, curr_nad);
@@ -31,13 +26,13 @@ pub fn count_a(
                 accumulator = accumulator + Mathrai(*u);
             }
             ASTNode::Gap(_) => {
-                let mc = count_m(n, root, symbol_table)?;
+                let mc = mat::size_helper(n, root, symbol_table)?;
                 accumulator = accumulator + mc;
             }
             ASTNode::FnCall(s) => {
                 let pos = symbol_table.get(s)?;
-                let target_fn_node = &chld[pos];
-                let mc = size_helper(target_fn_node, root, symbol_table, true)?;
+                let target_fn_node = &child[pos];
+                let mc = mat::seq_count_m(target_fn_node)?;
                 accumulator = accumulator + mc;
             }
             _ => {}
