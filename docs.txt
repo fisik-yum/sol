@@ -3,15 +3,17 @@ sol - documentation
 
 1a. INTRO.
 ----------
-sol is a command-line program to describe 
+sol is a command-line program and 
+domain-specific-language to describe 
 percussion solkattu. It is styled as a 
 declarative language with with the capacity 
 to process stored procedures.
 
-Primarily, the goal of this system is to 
-describe and verify sequences. This means 
-that there will be near to no extensions to
-syntax for control flow constructs.
+Primarily, the goal of this system was to 
+describe and verify sequences for notetaking. 
+This means that there will be near to no 
+extensions to syntax for control flow 
+constructs in the future.
 
 1b. INVOCATION.
 ---------------
@@ -58,8 +60,7 @@ referencing the sequence (in this case, "a").
 
 Like gaps, sequences are required to be flat, in that 
 they cannot encompass other sequence declarations inside. 
-However, it is possible to invoke a sequence. Gaps are 
-allowed.
+In addition, they cannot recursively call other sequences.
 
 3. ADDITIONAL CONSTRUCTS AND QUIRKS
 ----------
@@ -74,3 +75,7 @@ nad annotates the value of one akshara (in maatirai).
 It is worth noting that both annotations cannot be invoked 
 inside a container. This is to avoid unnecessary design 
 cases when it comes to the execution engine.
+
+Z. FOOTNOTES
+-------------
+document last updated 2026-08-31 15:06
