@@ -4,7 +4,7 @@ pub mod stdlib;
 pub mod tokenize;
 pub mod warnings;
 
-use std::{collections::HashMap, fmt::Debug};
+use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
 use talm::unit::Mathrai;
 
@@ -13,7 +13,7 @@ use crate::sys::warnings::Error;
 pub struct Program<'p> {
     pub root: ast::ASTNode<'p>,
     pub symbols: SymbolTable<'p>,
-    pub memo: HashMap<&'p str, Mathrai>,
+    pub memo: RefCell<HashMap<&'p str, Mathrai>>,
 }
 impl<'p> Program<'p> {
     pub fn new(
@@ -24,21 +24,24 @@ impl<'p> Program<'p> {
         Self {
             root,
             symbols,
-            memo,
+            memo: RefCell::new(memo),
         }
     }
-
-    fn get_memo(&self, key: &'p str) -> Option<&Mathrai> {
-        // should convert to result and warning?
-        self.memo.get(key)
+    pub fn get_root(&self) -> &ast::ASTNode<'p> {
+        return &self.root;
     }
 
-    fn set_memo(&mut self, key: &'p str, value: Mathrai) {
-        self.memo.insert(key, value);
+    pub fn get_memo(&self, key: &str) -> Option<Mathrai> {
+        // should convert to result and warning?
+        self.memo.borrow().get(key).cloned()
+    }
+
+    pub fn set_memo(&self, key: &'p str, value: Mathrai) {
+        self.memo.borrow_mut().insert(key, value);
     }
 
     pub fn mathrai_count(&self) -> Result<Mathrai, Error> {
-        stdlib::mat::size_helper(&self.root, &self.root, &self.symbols)
+        stdlib::mat::size_helper(&self.root, self)
     }
     pub fn akshara_count() {}
 }

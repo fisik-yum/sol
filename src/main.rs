@@ -67,7 +67,7 @@ fn main() {
     }
 
     if args.aksh {
-        let size = match sol::sys::stdlib::aks::count_a(&prog.root, &prog.symbols) {
+        let size = match sol::sys::stdlib::aks::count_a(&prog) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e.report(&loc, &t));

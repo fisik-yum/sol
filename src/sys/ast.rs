@@ -52,6 +52,15 @@ impl<'n> ASTNode<'n> {
             _ => panic!("get_children called on a non-Sequence node: {}", self),
         }
     }
+    pub fn get_child(&self, idx: usize) -> &Self {
+        let c = match self {
+            ASTNode::Sequence(_, v) => v,
+            ASTNode::Root(v) => v,
+            ASTNode::Gap(v) => v,
+            _ => panic!("get_children called on a non-Sequence node: {}", self),
+        };
+        return &c[idx];
+    }
     pub fn get_name(&self) -> &'n str {
         match self {
             ASTNode::Sequence(s, _) => s,
