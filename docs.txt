@@ -20,7 +20,9 @@ constructs in the future.
 Invocation of the runtime is quite simple. 
 The argument 'f' supplies a sol file to the 
 engine, while arguments 'm' and 'a' print 
-out statistics.
+out statistics. It is worth noting that the 
+avartana calculation code is incomplete and 
+can yield incorrect results.
 
 2. SYNTAX.
 ----------
