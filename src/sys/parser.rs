@@ -45,11 +45,13 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
     let mut sym_table = SymbolTable::new();
 
     // set default tal
+    let u: usize;
     if let Some(tal_set) = iter.peek() {
         match tal_set.token() {
             Token::Tal => {
                 iter.next();
-                let n = parse_tal(iter.by_ref())?;
+                let (n, k) = parse_tal(iter.by_ref())?;
+                u = k;
                 let _ = tree.insert_node(n);
             }
             _ => {
@@ -82,7 +84,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
             }
             Token::Tal => {
                 iter.next();
-                let n = parse_tal(iter.by_ref())?;
+                let (n, _) = parse_tal(iter.by_ref())?;
                 let _ = tree.insert_node(n);
             }
             Token::Nad => {
@@ -113,7 +115,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
             }
         }
     }
-    Ok(Program::new(tree, sym_table, HashMap::new()))
+    Ok(Program::new(tree, u, sym_table, HashMap::new()))
 }
 
 fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, Error> {
@@ -138,9 +140,9 @@ fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, Error> 
     }
 }
 
-fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
+fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<(ASTNode<'a>, usize), Error> {
     let u = parse_figure(iter)?;
-    return Ok(ASTNode::Tal(u));
+    return Ok((ASTNode::Tal(u), u));
 }
 
 fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {

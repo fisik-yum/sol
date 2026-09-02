@@ -12,17 +12,20 @@ use crate::sys::warnings::Error;
 
 pub struct Program<'p> {
     pub root: ast::ASTNode<'p>,
+    pub cycle: usize,
     pub symbols: SymbolTable<'p>,
     pub memo: RefCell<HashMap<&'p str, Mathrai>>,
 }
 impl<'p> Program<'p> {
     pub fn new(
         root: ast::ASTNode<'p>,
+        cycle: usize,
         symbols: SymbolTable<'p>,
         memo: HashMap<&'p str, Mathrai>,
     ) -> Self {
         Self {
             root,
+            cycle,
             symbols,
             memo: RefCell::new(memo),
         }

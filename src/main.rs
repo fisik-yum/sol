@@ -74,8 +74,11 @@ fn main() {
                 std::process::exit(1);
             }
         };
-        println!("PartialAks: {}", size);
+        print!("PartialAks: {}", size);
+        let cycles = talm::ava::Avartana::from_standard(size, prog.cycle);
+        println!("({})", cycles);
     }
+
 
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");

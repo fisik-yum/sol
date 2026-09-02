@@ -162,7 +162,7 @@ dependencies = [
 [[package]]
 name = "talm"
 version = "0.1.0"
-source = "git+https://github.com/fisik-yum/talm.git#79d67b7b25f71446c6f4ed063da74d5f2c9154e3"
+source = "git+https://github.com/fisik-yum/talm.git#0fc2e02daaf95983fa774516e04546b2efbb06f9"
 
 [[package]]
 name = "unicode-ident"
