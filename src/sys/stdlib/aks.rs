@@ -1,10 +1,8 @@
-use crate::sys::{self, ast::{ASTNode}, stdlib::mat, warnings::Error};
+use crate::sys::{self, ast::ASTNode, stdlib::mat, warnings::Error};
 use talm::aks::*;
 use talm::unit::Mathrai;
 
-pub fn count_a<'p>(
-    prog: &sys::Program<'p>,
-) -> Result<StandardAkshara, Error> {
+pub fn count_a<'p>(prog: &sys::Program<'p>) -> Result<StandardAkshara, Error> {
     let mut ret = StandardAkshara {
         count: 0,
         edam: Carry { num: 0, den: 4 },

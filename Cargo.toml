@@ -7,5 +7,6 @@ edition = "2024"
 panic = "deny"
 [dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
+rustyline = "18.0.1"
 talm = { git = "https://github.com/fisik-yum/talm.git"}
 

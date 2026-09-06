@@ -1,12 +1,17 @@
 use clap::Parser;
 use sol::sys::{parser, tokenize};
+mod repl;
 use std::time;
 use std::{fs, path::Path};
 #[derive(Parser, Debug)]
 #[command(version, about="command-line solkattu verification program", long_about = None)]
 struct Args {
-    #[arg(short = 'f', long = "file")]
+    #[arg(short = 'f', default_value_t="".to_string() ,long = "file")]
     f: String,
+
+    // open repl
+    #[arg(short = 'r', long, default_value_t = false, help = "run repl")]
+    repl: bool,
 
     // print tree
     #[arg(short = 't', long, default_value_t = false, help = "print parse tree")]
@@ -32,6 +37,10 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
+    if args.repl {
+        repl::run();
+    }
+
     let loc = &args.f.as_str();
     let p = Path::new(&loc);
 
@@ -52,7 +61,7 @@ fn main() {
 
     // ARG HANDLING CODE
     if args.tree {
-        &prog.root.prettyprint();
+        let _ = &prog.root.prettyprint();
     }
 
     if args.mat {
@@ -78,7 +87,6 @@ fn main() {
         let cycles = talm::ava::Avartana::from_standard(size, prog.cycle);
         println!("({})", cycles);
     }
-
 
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");
