@@ -1,5 +1,5 @@
 use clap::Parser;
-use sol::sys::{parser, tokenize};
+use sol::sys::{Pipeline, parser, tokenize, transforms};
 mod repl;
 use std::time;
 use std::{fs, path::Path};
@@ -38,7 +38,7 @@ fn main() {
     let args = Args::parse();
 
     if args.repl {
-        repl::run();
+        //repl::run();
     }
 
     let loc = &args.f.as_str();
@@ -49,15 +49,10 @@ fn main() {
     let f = fs::read(p);
     let t = String::from_utf8(f.unwrap()).unwrap();
 
-    let tokenizer = tokenize::Tokenizer::from(t.as_str());
-
-    let prog = match parser::parse(tokenizer) {
-        Ok(v) => v,
-        Err(e) => {
-            eprintln!("{}", e.report(&loc, &t));
-            std::process::exit(1);
-        }
-    };
+    let mut pipe = Pipeline::new();
+    pipe.add_stage(&transforms::RemoveInteractive);
+    let mut prog = pipe.ingest(t.as_str()).unwrap();
+    prog.regenerate_table();
 
     // ARG HANDLING CODE
     if args.tree {

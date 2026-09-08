@@ -113,6 +113,20 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
             Token::GapEnd => {
                 return Err(Error::at(pos, "unexpected ')' (no matching gap)"));
             }
+            Token::Load => {
+                iter.next();
+                let name = parse_ident(iter)?;
+                tree.insert_node(ASTNode::Load(name));
+            }
+            Token::Inspect => {
+                iter.next();
+                let name = parse_ident(iter)?;
+                tree.insert_node(ASTNode::Inspect(name));
+            }
+            Token::Reload => {
+                iter.next();
+                tree.insert_node(ASTNode::Reload);
+            }
         }
     }
     Ok(Program::new(tree, u, sym_table, HashMap::new()))
@@ -241,6 +255,9 @@ fn parse_body<'a>(
                     return Err(Error::at(pos, "unexpected ')' (no matching gap)"));
                 }
             },
+            _ => {
+                return Err(Error::at(pos, "unexpected/unallowed keyword"));
+            }
         }
     }
     Ok(())

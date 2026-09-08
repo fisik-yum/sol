@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub struct Error {
     pos: Option<usize>,
     msg: String,

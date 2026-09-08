@@ -8,4 +8,7 @@ seq korvai {
     6 6 6 (3)
     7 7 7
 }
+inspect test.sol
+reload
+load korvai
 korvai

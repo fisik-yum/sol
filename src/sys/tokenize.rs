@@ -16,6 +16,10 @@ pub enum Token<'t> {
     SeqEnd,           // }
     GapStart,         // (
     GapEnd,           // )
+    // "introspection" codes for interactive mode
+    Load,
+    Reload,
+    Inspect,
 }
 
 pub struct SpanToken<'s> {
@@ -50,6 +54,10 @@ impl std::fmt::Display for Token<'_> {
             Self::Figure(u) => write!(f, "figure({})", u),
             Self::GapStart => write!(f, "gap start"),
             Self::GapEnd => write!(f, "gap end"),
+
+            Self::Inspect => write!(f, "inspect"),
+            Self::Load => write!(f, "load"),
+            Self::Reload => write!(f, "reload"),
         }
     }
 }
@@ -148,6 +156,9 @@ fn match_syntax_token<'a>(val: &'a str) -> Token<'a> {
         "seq" => Token::Seq,
         "tal" => Token::Tal,
         "nad" => Token::Nad,
+        "reload" => Token::Reload,
+        "inspect" => Token::Inspect,
+        "load" => Token::Load,
         _ => Token::Literal(val),
     }
 }

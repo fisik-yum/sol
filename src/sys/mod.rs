@@ -2,6 +2,7 @@ pub mod ast;
 pub mod parser;
 pub mod stdlib;
 pub mod tokenize;
+pub mod transforms;
 pub mod warnings;
 
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
@@ -9,6 +10,31 @@ use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 use talm::unit::Mathrai;
 
 use crate::sys::warnings::Error;
+
+pub struct Pipeline<'p> {
+    transform_path: Vec<&'p dyn transforms::Transform>,
+}
+
+impl<'p> Pipeline<'p> {
+    pub fn new() -> Self {
+        Self {
+            transform_path: vec![],
+        }
+    }
+
+    pub fn add_stage(&mut self, stage: &'p dyn transforms::Transform) {
+        self.transform_path.push(stage);
+    }
+
+    pub fn ingest(&self, input: &'p str) -> Result<Program<'p>, Error> {
+        let tokenizer = tokenize::Tokenizer::from(input);
+        let mut program = parser::parse(tokenizer).unwrap();
+        for stage in self.transform_path.as_slice() {
+            program = stage.mutate(program)?;
+        }
+        Ok(program)
+    }
+}
 
 pub struct Program<'p> {
     pub root: ast::ASTNode<'p>,
@@ -33,7 +59,22 @@ impl<'p> Program<'p> {
     pub fn get_root(&self) -> &ast::ASTNode<'p> {
         return &self.root;
     }
-
+    pub fn transform<T: transforms::Transform>(self, t: T) -> Self {
+        t.mutate(self).unwrap()
+    }
+    pub fn regenerate_table(&mut self) {
+        self.symbols = SymbolTable::new();
+        let children = self.root.get_children();
+        for idx in 0..children.len() {
+            match children[idx] {
+                ast::ASTNode::Sequence(s, _) => {
+                    // TODO: cascade errors
+                    let _ = self.symbols.insert(s, idx, 0);
+                }
+                _ => {}
+            }
+        }
+    }
     pub fn get_memo(&self, key: &str) -> Option<Mathrai> {
         // should convert to result and warning?
         self.memo.borrow().get(key).cloned()
