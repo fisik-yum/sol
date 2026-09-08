@@ -23,7 +23,7 @@ pub fn count_a<'p>(prog: &sys::Program<'p>) -> Result<StandardAkshara, Error> {
                 accumulator = accumulator + Mathrai(*u);
             }
             ASTNode::Gap(_) => {
-                let mc = mat::size_helper(n, prog)?;
+                let mc = mat::count_m(n, prog)?;
                 accumulator = accumulator + mc;
             }
             ASTNode::FnCall(s) => {

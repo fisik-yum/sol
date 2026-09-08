@@ -1,13 +1,13 @@
-pub mod ast;
-pub mod parser;
+mod ast;
+mod parser;
 pub mod stdlib;
-pub mod tokenize;
+mod tokenize;
 pub mod transforms;
 pub mod warnings;
 
 use std::{cell::RefCell, collections::HashMap, fmt::Debug};
 
-use talm::unit::Mathrai;
+use talm::{aks::StandardAkshara, unit::Mathrai};
 
 use crate::sys::warnings::Error;
 
@@ -85,9 +85,12 @@ impl<'p> Program<'p> {
     }
 
     pub fn mathrai_count(&self) -> Result<Mathrai, Error> {
-        stdlib::mat::size_helper(&self.root, self)
+        stdlib::mat::count_m(&self.root, self)
     }
-    pub fn akshara_count() {}
+
+    pub fn akshara_count(&self) -> Result<StandardAkshara, Error> {
+        stdlib::aks::count_a(self)
+    }
 }
 pub struct SymbolTable<'a> {
     table: HashMap<&'a str, usize>,

@@ -1,5 +1,5 @@
 use clap::Parser;
-use sol::sys::{Pipeline, parser, tokenize, transforms};
+use sol::sys::{Pipeline, transforms};
 mod repl;
 use std::time;
 use std::{fs, path::Path};

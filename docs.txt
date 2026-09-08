@@ -73,6 +73,7 @@ The two core constructs are "tal" and "nad", referencing
 talam and nadai respectively. tal is a procedure that 
 annotates the length of one talam cycle (as akshara), while 
 nad annotates the value of one akshara (in maatirai).
+tal can be invoked exactly once at the beginning of a file.
 
 It is worth noting that both annotations cannot be invoked 
 inside a container. This is to avoid unnecessary design 
@@ -80,4 +81,4 @@ cases when it comes to the execution engine.
 
 Z. FOOTNOTES
 -------------
-document last updated 2026-08-31 15:06
+document last updated 2026-09-07 21:48

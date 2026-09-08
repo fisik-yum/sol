@@ -2,7 +2,7 @@ use crate::sys::warnings::Error;
 use crate::sys::{Program, ast};
 use talm::unit::Mathrai;
 
-pub fn size_helper<'p>(n: &ast::ASTNode<'p>, prog: &Program<'p>) -> Result<Mathrai, Error> {
+pub fn count_m<'p>(n: &ast::ASTNode<'p>, prog: &Program<'p>) -> Result<Mathrai, Error> {
     let mut res = Mathrai(0);
     match n {
         ast::ASTNode::Figure(u) => return Ok(Mathrai(*u)),
@@ -13,12 +13,12 @@ pub fn size_helper<'p>(n: &ast::ASTNode<'p>, prog: &Program<'p>) -> Result<Mathr
         }
         ast::ASTNode::Root(v) => {
             for c in v {
-                res = res + size_helper(c, prog)?;
+                res = res + count_m(c, prog)?;
             }
         }
         ast::ASTNode::Gap(v) => {
             for c in v {
-                res = res + size_helper(c, prog)?;
+                res = res + count_m(c, prog)?;
             }
         }
         ast::ASTNode::Sequence(_, _) => {
