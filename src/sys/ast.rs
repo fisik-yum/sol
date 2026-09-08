@@ -62,9 +62,9 @@ impl<'n> ASTNode<'n> {
     }
     pub fn set_children(&mut self, nc: Vec<Self>) {
         match self {
-            ASTNode::Sequence(_, v) => *v=nc,
-            ASTNode::Root(v) => *v=nc,
-            ASTNode::Gap(v) => *v=nc,
+            ASTNode::Sequence(_, v) => *v = nc,
+            ASTNode::Root(v) => *v = nc,
+            ASTNode::Gap(v) => *v = nc,
             _ => panic!("set_children called on a non-Sequence node: {}", self),
         }
     }
