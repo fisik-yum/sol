@@ -1,3 +1,9 @@
+NOTE: 
+Sol's internal API is being heavily reworked to support 
+proper REPL-style interaction and a pipeline system 
+for ASTs.
+
+
 Sol
 ===
 Sol is a very experimental system to programmatically
