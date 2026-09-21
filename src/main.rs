@@ -1,6 +1,6 @@
 use clap::Parser;
-use sol::sys::{Pipeline, transforms};
-mod repl;
+use sol::sys::{self, Pipeline, transforms};
+// mod repl;
 use std::time;
 use std::{fs, path::Path};
 #[derive(Parser, Debug)]
@@ -49,18 +49,22 @@ fn main() {
     let f = fs::read(p);
     let t = String::from_utf8(f.unwrap()).unwrap();
 
+    let tokens = sys::tokenize::Tokenizer::from(t.as_str());
+
+    let tree = sys::parser::parse(tokens).unwrap();
+    let sym = sys::SymbolTable::new(&tree).unwrap();
+
     let mut pipe = Pipeline::new();
     pipe.add_stage(&transforms::RemoveInteractive);
-    let mut prog = pipe.ingest(t.as_str()).unwrap();
-    prog.regenerate_table();
+    let _env = sys::Environment::new(pipe);
 
     // ARG HANDLING CODE
     if args.tree {
-        let _ = &prog.root.prettyprint();
+        let _ = tree.prettyprint();
     }
 
     if args.mat {
-        let size = match prog.mathrai_count() {
+        let size = match sys::stdlib::mat::count_m(&tree, &sym) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e.report(&loc, &t));
@@ -71,7 +75,7 @@ fn main() {
     }
 
     if args.aksh {
-        let size = match sol::sys::stdlib::aks::count_a(&prog) {
+        let size = match sys::stdlib::aks::count_a(&tree, &sym) {
             Ok(v) => v,
             Err(e) => {
                 eprintln!("{}", e.report(&loc, &t));
@@ -79,8 +83,9 @@ fn main() {
             }
         };
         print!("PartialAks: {}", size);
-        let cycles = talm::ava::Avartana::from_standard(size, prog.cycle);
-        println!("({})", cycles);
+        // bad code ngl: we gotta fix this
+        //let cycles = talm::ava::Avartana::from_standard(size, prog.cycle);
+        //println!("({})", cycles);
     }
 
     let duration = (time::Instant::now() - start).as_micros();

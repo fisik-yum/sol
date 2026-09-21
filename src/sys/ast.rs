@@ -73,7 +73,7 @@ impl<'n> ASTNode<'n> {
             ASTNode::Sequence(_, v) => v,
             ASTNode::Root(v) => v,
             ASTNode::Gap(v) => v,
-            _ => panic!("get_children called on a non-Sequence node: {}", self),
+            _ => panic!("get_child called on a non-Sequence node: {}", self),
         };
         return &c[idx];
     }

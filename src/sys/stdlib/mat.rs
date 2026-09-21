@@ -1,27 +1,25 @@
-use crate::sys::warnings::Error;
-use crate::sys::{Program, ast};
+use crate::sys::{SymbolTable, ast::ASTNode, warnings::Error};
 use talm::unit::Mathrai;
 
-pub fn count_m<'p>(n: &ast::ASTNode<'p>, prog: &Program<'p>) -> Result<Mathrai, Error> {
+pub fn count_m<'p>(root: &ASTNode<'p>, symbols: &SymbolTable<'p>) -> Result<Mathrai, Error> {
     let mut res = Mathrai(0);
-    match n {
-        ast::ASTNode::Figure(u) => return Ok(Mathrai(*u)),
-        ast::ASTNode::FnCall(s) => {
-            let pos = prog.symbols.get(s)?;
-            let target_node = prog.get_root().get_child(pos);
-            res = res + seq_count_m(target_node, prog)?;
+    match root {
+        ASTNode::Figure(u) => return Ok(Mathrai(*u)),
+        ASTNode::FnCall(s) => {
+            let target_node = symbols.get(s)?;
+            res = res + seq_count_m(target_node)?;
         }
-        ast::ASTNode::Root(v) => {
+        ASTNode::Root(v) => {
             for c in v {
-                res = res + count_m(c, prog)?;
+                res = res + count_m(c, symbols)?;
             }
         }
-        ast::ASTNode::Gap(v) => {
+        ASTNode::Gap(v) => {
             for c in v {
-                res = res + count_m(c, prog)?;
+                res = res + count_m(c, symbols)?;
             }
         }
-        ast::ASTNode::Sequence(_, _) => {
+        ASTNode::Sequence(_, _) => {
             return Ok(Mathrai(0));
         }
         _ => res = Mathrai(0),
@@ -29,23 +27,25 @@ pub fn count_m<'p>(n: &ast::ASTNode<'p>, prog: &Program<'p>) -> Result<Mathrai, 
     Ok(res)
 }
 
-pub fn seq_count_m<'p>(head: &ast::ASTNode<'p>, prog: &Program<'p>) -> Result<Mathrai, Error> {
+pub fn seq_count_m<'p>(head: &ASTNode<'p>) -> Result<Mathrai, Error> {
     let mut res: usize = 0;
 
     match head {
-        ast::ASTNode::Sequence(s, children) => {
+        ASTNode::Sequence(_s, children) => {
+            /*
             let memo_value = prog.get_memo(s);
             if memo_value.is_some() {
                 return Ok(memo_value.unwrap());
             }
+            */
 
             for child in children {
                 match child {
-                    ast::ASTNode::Figure(u) => res = res + u,
-                    ast::ASTNode::Gap(sub_children) => {
+                    ASTNode::Figure(u) => res = res + u,
+                    ASTNode::Gap(sub_children) => {
                         for sub_child in sub_children {
                             match sub_child {
-                                ast::ASTNode::Figure(u) => res = res + u,
+                                ASTNode::Figure(u) => res = res + u,
                                 _ => return Err(Error::global("encountered illegal node in gap")),
                             }
                         }
@@ -54,7 +54,7 @@ pub fn seq_count_m<'p>(head: &ast::ASTNode<'p>, prog: &Program<'p>) -> Result<Ma
                     _ => return Err(Error::global("encountered illegal node in sequence")),
                 }
             }
-            prog.set_memo(s, Mathrai(res));
+            //prog.set_memo(s, Mathrai(res));
             Ok(Mathrai(res))
         }
         _ => return Err(Error::global("cannot invoke helper on non-sequence node")),

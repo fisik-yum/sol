@@ -1,11 +1,9 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 use std::iter::Peekable;
 
 use crate::sys::ast::ASTNode;
 use crate::sys::tokenize::{Token, Tokenizer};
 use crate::sys::warnings::Error;
-use crate::sys::{Program, SymbolTable};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Frame {
@@ -36,22 +34,19 @@ impl FrameStack {
     }
 }
 
-pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
+pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error> {
     // builds an AST object
     let mut tok_stream = tokenizer.peekable();
     let iter = tok_stream.by_ref();
     let mut stack = FrameStack { stack: Vec::new() };
     let mut tree = ASTNode::Root(vec![]);
-    let mut sym_table = SymbolTable::new();
 
-    // set default tal
-    let u: usize;
+    // set default tal NOTE: THIS IS STUPID AND MUST BE STANDARDIZED
     if let Some(tal_set) = iter.peek() {
         match tal_set.token() {
             Token::Tal => {
                 iter.next();
-                let (n, k) = parse_tal(iter.by_ref())?;
-                u = k;
+                let (n, _) = parse_tal(iter.by_ref())?;
                 let _ = tree.insert_node(n);
             }
             _ => {
@@ -75,9 +70,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
             Token::Seq => {
                 iter.next();
                 let n = parse_seq(iter.by_ref(), &mut stack)?;
-                let id = n.get_name();
-                let idx = tree.insert_node(n);
-                sym_table.insert(id, idx, pos)?;
+                let _idx = tree.insert_node(n);
             }
             Token::Sol => {
                 return Err(Error::at(pos, "use of restricted keyword 'sol'"));
@@ -129,7 +122,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<Program<'p>, Error> {
             }
         }
     }
-    Ok(Program::new(tree, u, sym_table, HashMap::new()))
+    Ok(tree)
 }
 
 fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, Error> {

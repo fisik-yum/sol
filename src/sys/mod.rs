@@ -1,15 +1,13 @@
-mod ast;
-mod parser;
+pub mod ast;
+pub mod parser;
 pub mod stdlib;
-mod tokenize;
+pub mod tokenize;
 pub mod transforms;
 pub mod warnings;
 
-use std::{cell::RefCell, collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug};
 
-use talm::{aks::StandardAkshara, unit::Mathrai};
-
-use crate::sys::warnings::Error;
+use crate::sys::{ast::ASTNode, warnings::Error};
 
 pub struct Pipeline<'p> {
     transform_path: Vec<&'p dyn transforms::Transform>,
@@ -26,91 +24,56 @@ impl<'p> Pipeline<'p> {
         self.transform_path.push(stage);
     }
 
-    pub fn ingest(&self, input: &'p str) -> Result<Program<'p>, Error> {
-        let tokenizer = tokenize::Tokenizer::from(input);
-        let mut program = parser::parse(tokenizer).unwrap();
+    pub fn ingest(&self, mut input: ASTNode<'p>) -> Result<ASTNode<'p>, Error> {
         for stage in self.transform_path.as_slice() {
-            program = stage.mutate(program)?;
+            input = stage.mutate(input).unwrap();
         }
-        Ok(program)
+        Ok(input)
     }
 }
 
-pub struct Program<'p> {
-    pub root: ast::ASTNode<'p>,
-    pub cycle: usize,
-    pub symbols: SymbolTable<'p>,
-    pub memo: RefCell<HashMap<&'p str, Mathrai>>,
+pub struct Environment<'p> {
+    pipe: Pipeline<'p>,
 }
-impl<'p> Program<'p> {
-    pub fn new(
-        root: ast::ASTNode<'p>,
-        cycle: usize,
-        symbols: SymbolTable<'p>,
-        memo: HashMap<&'p str, Mathrai>,
-    ) -> Self {
-        Self {
-            root,
-            cycle,
-            symbols,
-            memo: RefCell::new(memo),
-        }
+impl<'p> Environment<'p> {
+    pub fn new(p: Pipeline<'p>) -> Self {
+        Self { pipe: p }
     }
-    pub fn get_root(&self) -> &ast::ASTNode<'p> {
-        return &self.root;
-    }
-    pub fn transform<T: transforms::Transform>(self, t: T) -> Self {
-        t.mutate(self).unwrap()
-    }
-    pub fn regenerate_table(&mut self) {
-        self.symbols = SymbolTable::new();
-        let children = self.root.get_children();
-        for idx in 0..children.len() {
-            match children[idx] {
-                ast::ASTNode::Sequence(s, _) => {
-                    // TODO: cascade errors
-                    let _ = self.symbols.insert(s, idx, 0);
-                }
-                _ => {}
-            }
-        }
-    }
-    pub fn get_memo(&self, key: &str) -> Option<Mathrai> {
-        // should convert to result and warning?
-        self.memo.borrow().get(key).cloned()
-    }
-
-    pub fn set_memo(&self, key: &'p str, value: Mathrai) {
-        self.memo.borrow_mut().insert(key, value);
-    }
-
-    pub fn mathrai_count(&self) -> Result<Mathrai, Error> {
-        stdlib::mat::count_m(&self.root, self)
-    }
-
-    pub fn akshara_count(&self) -> Result<StandardAkshara, Error> {
-        stdlib::aks::count_a(self)
-    }
+    pub fn interpret(root: ASTNode<'p>) {}
 }
+
 pub struct SymbolTable<'a> {
-    table: HashMap<&'a str, usize>,
+    table: HashMap<&'a str, &'a ASTNode<'a>>,
 }
 
 impl<'a> SymbolTable<'a> {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(root: &'a ASTNode<'a>) -> Result<Self,Error> {
+        let mut ret = Self {
             table: HashMap::new(),
+        };
+
+        let children = root.get_children().as_slice();
+
+        for i in 0..children.len() {
+            let child = &children[i];
+            match child {
+                ASTNode::Sequence(s, _) => {
+                    ret.insert(s, child)?;
+                }
+                _ => {}
+            };
         }
+        Ok(ret)
     }
-    pub fn insert(&mut self, k: &'a str, idx: usize, pos: usize) -> Result<(), Error> {
+    fn insert(&mut self, k: &'a str, idx: &'a ASTNode<'a>) -> Result<(), Error> {
         if self.table.contains_key(k) {
-            return Err(Error::at(pos, format!("sequence redefined: {k}")));
+            return Err(Error::global(format!("sequence redefined: {k}")));
         }
         self.table.insert(k, idx);
         Ok(())
     }
 
-    pub fn get(&self, k: &'a str) -> Result<usize, Error> {
+    pub fn get(&self, k: &'a str) -> Result<&'a ASTNode<'a>, Error> {
         self.table
             .get(k)
             .copied()

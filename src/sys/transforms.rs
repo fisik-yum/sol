@@ -1,7 +1,7 @@
-use crate::sys::{Program, ast::ASTNode, warnings::Error};
+use crate::sys::{ast::ASTNode, warnings::Error};
 
 pub trait Transform {
-    fn mutate<'m>(&self, _head: Program<'m>) -> Result<Program<'m>, Error> {
+    fn mutate<'m>(&self, _root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
         Err(Error::global("invalid transform"))
     }
 }
@@ -14,8 +14,7 @@ impl RemoveInteractive {
     }
 }
 impl Transform for RemoveInteractive {
-    fn mutate<'m>(&self, mut head: Program<'m>) -> Result<Program<'m>, Error> {
-        let root = &mut head.root;
+    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
         let filter: Vec<ASTNode> = root
             .get_children()
             .iter()
@@ -23,7 +22,7 @@ impl Transform for RemoveInteractive {
             .filter(|n| !n.is_interactive())
             .collect();
         root.set_children(filter);
-        Ok(head)
+        Ok(root)
     }
 }
 
@@ -34,8 +33,7 @@ impl KeepInteractive {
     }
 }
 impl Transform for KeepInteractive {
-    fn mutate<'m>(&self, mut head: Program<'m>) -> Result<Program<'m>, Error> {
-        let root = &mut head.root;
+    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
         let filter: Vec<ASTNode> = root
             .get_children()
             .iter()
@@ -43,7 +41,7 @@ impl Transform for KeepInteractive {
             .filter(|n| !n.is_interactive())
             .collect();
         root.set_children(filter);
-        Ok(head)
+        Ok(root)
     }
 }
 
@@ -54,8 +52,7 @@ impl InteractiveMode {
     }
 }
 impl Transform for InteractiveMode {
-    fn mutate<'m>(&self, mut head: Program<'m>) -> Result<Program<'m>, Error> {
-        let root = &mut head.root;
+    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
         let filter: Vec<ASTNode> = root
             .get_children()
             .iter()
@@ -63,6 +60,6 @@ impl Transform for InteractiveMode {
             .filter(|n| matches!(n, ASTNode::Sequence(_, _)) || n.is_interactive())
             .collect();
         root.set_children(filter);
-        Ok(head)
+        Ok(root)
     }
 }

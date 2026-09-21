@@ -1,14 +1,16 @@
-use crate::sys::{self, ast::ASTNode, stdlib::mat, warnings::Error};
+use crate::sys::SymbolTable;
+use crate::sys::{ast::ASTNode, stdlib::mat, warnings::Error};
 use talm::aks::*;
 use talm::unit::Mathrai;
 
-pub fn count_a<'p>(prog: &sys::Program<'p>) -> Result<StandardAkshara, Error> {
+// WARNING: there is something seriously wrong with either this/talm impl
+pub fn count_a<'p>(root: &ASTNode, symbols: &SymbolTable) -> Result<StandardAkshara, Error> {
     let mut ret = StandardAkshara {
         count: 0,
         edam: Carry { num: 0, den: 4 },
     };
     let mut accumulator = Mathrai(0);
-    let child = prog.root.get_children();
+    let child = root.get_children();
 
     let mut curr_nad = Mathrai(4);
 
@@ -23,13 +25,12 @@ pub fn count_a<'p>(prog: &sys::Program<'p>) -> Result<StandardAkshara, Error> {
                 accumulator = accumulator + Mathrai(*u);
             }
             ASTNode::Gap(_) => {
-                let mc = mat::count_m(n, prog)?;
+                let mc = mat::count_m(n, symbols)?;
                 accumulator = accumulator + mc;
             }
             ASTNode::FnCall(s) => {
-                let pos = prog.symbols.get(s)?;
-                let target_fn_node = &child[pos];
-                let mc = mat::seq_count_m(target_fn_node, prog)?;
+                let target_fn_node = symbols.get(s)?;
+                let mc = mat::seq_count_m(target_fn_node)?;
                 accumulator = accumulator + mc;
             }
             _ => {}
