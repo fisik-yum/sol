@@ -40,30 +40,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error> {
     let iter = tok_stream.by_ref();
     let mut stack = FrameStack { stack: Vec::new() };
     let mut tree = ASTNode::Root(vec![]);
-
-    // set default tal NOTE: THIS IS STUPID AND MUST BE STANDARDIZED
-    if let Some(tal_set) = iter.peek() {
-        match tal_set.token() {
-            Token::Tal => {
-                iter.next();
-                let (n, _) = parse_tal(iter.by_ref())?;
-                let _ = tree.insert_node(n);
-            }
-            _ => {
-                let pos = tal_set.start();
-                return Err(Error::at(pos, "Expected tal decl at beginning of file"));
-            }
-        }
-    } else {
-        // NOTE: is this normal behavior?
-        return Err(Error::at(0, "Expected tal decl at beginning of file"));
-    }
-
-    // insert default nad node
-    tree.insert_node(ASTNode::Nad(4));
-    // in the future we may want something more intelligent
-    // this can be immediately overriden, btw.
-
+    
     while let Some(span) = iter.peek() {
         let pos = span.start();
         match span.token() {

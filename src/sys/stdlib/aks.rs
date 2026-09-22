@@ -1,4 +1,4 @@
-use crate::sys::SymbolTable;
+use crate::sys::interpreter::SymbolTable;
 use crate::sys::{ast::ASTNode, stdlib::mat, warnings::Error};
 use talm::aks::*;
 use talm::unit::Mathrai;

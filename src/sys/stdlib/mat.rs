@@ -1,4 +1,4 @@
-use crate::sys::{SymbolTable, ast::ASTNode, warnings::Error};
+use crate::sys::{interpreter::SymbolTable, ast::ASTNode, warnings::Error};
 use talm::unit::Mathrai;
 
 pub fn count_m<'p>(root: &ASTNode<'p>, symbols: &SymbolTable<'p>) -> Result<Mathrai, Error> {
@@ -32,13 +32,6 @@ pub fn seq_count_m<'p>(head: &ASTNode<'p>) -> Result<Mathrai, Error> {
 
     match head {
         ASTNode::Sequence(_s, children) => {
-            /*
-            let memo_value = prog.get_memo(s);
-            if memo_value.is_some() {
-                return Ok(memo_value.unwrap());
-            }
-            */
-
             for child in children {
                 match child {
                     ASTNode::Figure(u) => res = res + u,
@@ -54,7 +47,6 @@ pub fn seq_count_m<'p>(head: &ASTNode<'p>) -> Result<Mathrai, Error> {
                     _ => return Err(Error::global("encountered illegal node in sequence")),
                 }
             }
-            //prog.set_memo(s, Mathrai(res));
             Ok(Mathrai(res))
         }
         _ => return Err(Error::global("cannot invoke helper on non-sequence node")),

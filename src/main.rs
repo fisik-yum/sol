@@ -1,5 +1,6 @@
 use clap::Parser;
-use sol::sys::{self, Pipeline, transforms};
+use sol::sys::interpreter::Pipeline;
+use sol::sys::{self, transforms};
 // mod repl;
 use std::time;
 use std::{fs, path::Path};
@@ -16,23 +17,6 @@ struct Args {
     // print tree
     #[arg(short = 't', long, default_value_t = false, help = "print parse tree")]
     tree: bool,
-
-    // print mathrai count
-    #[arg(
-        short = 'm',
-        long,
-        default_value_t = false,
-        help = "print cumulative mathrai count"
-    )]
-    mat: bool,
-    // print akshara count
-    #[arg(
-        short = 'a',
-        long,
-        default_value_t = false,
-        help = "print cumulative + relative akshara count"
-    )]
-    aksh: bool,
 }
 fn main() {
     let args = Args::parse();
@@ -52,42 +36,18 @@ fn main() {
     let tokens = sys::tokenize::Tokenizer::from(t.as_str());
 
     let tree = sys::parser::parse(tokens).unwrap();
-    let sym = sys::SymbolTable::new(&tree).unwrap();
 
     let mut pipe = Pipeline::new();
     pipe.add_stage(&transforms::RemoveInteractive);
-    let _env = sys::Environment::new(pipe);
+    let env = sys::interpreter::Environment::new(pipe);
 
     // ARG HANDLING CODE
     if args.tree {
         let _ = tree.prettyprint();
     }
 
-    if args.mat {
-        let size = match sys::stdlib::mat::count_m(&tree, &sym) {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("{}", e.report(&loc, &t));
-                std::process::exit(1);
-            }
-        };
-        println!("Mathrai: {}", size);
-    }
-
-    if args.aksh {
-        let size = match sys::stdlib::aks::count_a(&tree, &sym) {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("{}", e.report(&loc, &t));
-                std::process::exit(1);
-            }
-        };
-        print!("PartialAks: {}", size);
-        // bad code ngl: we gotta fix this
-        //let cycles = talm::ava::Avartana::from_standard(size, prog.cycle);
-        //println!("({})", cycles);
-    }
-
+    let res = env.interpret(tree).unwrap();
+    println!("{}", res);
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");
 }
