@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
+use std::rc::Rc;
 
 use talm::aks::{Carry, StandardAkshara};
 use talm::unit::Mathrai;
@@ -20,28 +21,36 @@ impl Display for InterpreterResult {
 
 pub struct Environment<'p> {
     stages: Pipeline<'p>,
+    pub sym_table: SymbolTable<'p>,
 }
 
 impl<'p> Environment<'p> {
     pub fn new(p: Pipeline<'p>) -> Self {
-        Self { stages: p }
+        Self {
+            stages: p,
+            sym_table: SymbolTable::default(),
+        }
     }
-    pub fn interpret(&self, mut root: ASTNode<'p>) -> Result<InterpreterResult, Error> {
+    pub fn interpret(&mut self, mut root: ASTNode<'p>) -> Result<InterpreterResult, Error> {
         root = self.stages.ingest(root)?;
-        interpret(&root)
+        let result = interpret(&root, &mut self.sym_table)?;
+        Ok(result)
     }
 }
 
 /*
- * the interpreter sequentially builds its own symbol table as it evaluates
+ * the interpreter sequentially builds the symbol table as it evaluates
  * a program.
+ * The symbol table is a shared state of the interpreter environment.
  */
-fn interpret(root: &ASTNode) -> Result<InterpreterResult, Error> {
+fn interpret<'p>(
+    root: &ASTNode<'p>,
+    symbols: &mut SymbolTable<'p>,
+) -> Result<InterpreterResult, Error> {
     let children = root.get_children();
 
     // interpreter state
     let mut memo: HashMap<&str, Mathrai> = HashMap::new();
-    let mut symbols = SymbolTable::default();
     // program parameters; default nadai is 4 (by convention)
     let mut talam: Option<usize> = None;
     let mut nadai = Mathrai(4);
@@ -56,7 +65,7 @@ fn interpret(root: &ASTNode) -> Result<InterpreterResult, Error> {
     };
 
     for child in children {
-        match child {
+        match &(**child) {
             ASTNode::Tal(u) => {
                 if talam.is_none() {
                     talam = Some(*u);
@@ -68,7 +77,7 @@ fn interpret(root: &ASTNode) -> Result<InterpreterResult, Error> {
                 nadai = Mathrai(*u);
             }
             ASTNode::Sequence(s, _) => {
-                symbols.insert(s, child)?;
+                symbols.insert(s, Rc::clone(child))?;
             }
             ASTNode::Figure(u) => {
                 mat_count = mat_count + Mathrai(*u);
@@ -80,9 +89,9 @@ fn interpret(root: &ASTNode) -> Result<InterpreterResult, Error> {
                 }
                 let mut count = Mathrai(0);
                 for fig in v {
-                    match fig {
+                    match **fig {
                         ASTNode::Figure(u) => {
-                            count = count + Mathrai(*u);
+                            count = count + Mathrai(u);
                         }
                         _ => return Err(Error::global("some unidentified error")),
                     }
@@ -98,7 +107,8 @@ fn interpret(root: &ASTNode) -> Result<InterpreterResult, Error> {
                 if memo.contains_key(f) {
                     count = memo.get(f).unwrap().clone();
                 } else {
-                    count = stdlib::mat::seq_count_m(symbols.get(f)?)?;
+                    let seq = symbols.get(f)?;
+                    count = stdlib::mat::seq_count_m(&seq)?;
                     memo.insert(f, count);
                 }
                 mat_count = mat_count + count;
@@ -137,12 +147,12 @@ impl<'p> Pipeline<'p> {
     }
 }
 
-pub struct SymbolTable<'a> {
-    table: HashMap<&'a str, &'a ASTNode<'a>>,
+pub struct SymbolTable<'p> {
+    table: HashMap<&'p str, Rc<ASTNode<'p>>>,
 }
 
-impl<'a> SymbolTable<'a> {
-    pub fn new(root: &'a ASTNode<'a>) -> Result<Self, Error> {
+impl<'p> SymbolTable<'p> {
+    pub fn new(root: &ASTNode<'p>) -> Result<Self, Error> {
         let mut ret = Self {
             table: HashMap::new(),
         };
@@ -151,27 +161,27 @@ impl<'a> SymbolTable<'a> {
 
         for i in 0..children.len() {
             let child = &children[i];
-            match child {
+            match **child {
                 ASTNode::Sequence(s, _) => {
-                    ret.insert(s, child)?;
+                    ret.insert(s, Rc::clone(child))?;
                 }
                 _ => {}
             };
         }
         Ok(ret)
     }
-    fn insert(&mut self, k: &'a str, idx: &'a ASTNode<'a>) -> Result<(), Error> {
+    pub fn insert(&mut self, k: &'p str, node: Rc<ASTNode<'p>>) -> Result<(), Error> {
         if self.table.contains_key(k) {
             return Err(Error::global(format!("sequence redefined: {k}")));
         }
-        self.table.insert(k, idx);
+        self.table.insert(k, node);
         Ok(())
     }
 
-    pub fn get(&self, k: &'a str) -> Result<&'a ASTNode<'a>, Error> {
+    pub fn get(&self, k: &str) -> Result<Rc<ASTNode<'p>>, Error> {
         self.table
             .get(k)
-            .copied()
+            .cloned()
             .ok_or_else(|| Error::global(format!("undefined sequence: {k}")))
     }
 }

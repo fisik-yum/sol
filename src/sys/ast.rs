@@ -1,11 +1,13 @@
+use std::rc::Rc;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ASTNode<'t> {
-    Root(Vec<Self>),
+    Root(Vec<Rc<Self>>),
     Tal(usize),
     Nad(usize),
-    Sequence(&'t str, Vec<Self>),
+    Sequence(&'t str, Vec<Rc<Self>>),
     FnCall(&'t str),
-    Gap(Vec<Self>),
+    Gap(Vec<Rc<Self>>),
     Figure(usize),
 
     Reload,
@@ -35,15 +37,15 @@ impl<'n> ASTNode<'n> {
     pub fn insert_node(&mut self, n: ASTNode<'n>) -> usize {
         match self {
             ASTNode::Root(v) => {
-                v.push(n);
+                v.push(Rc::new(n));
                 v.len() - 1
             }
             ASTNode::Sequence(_, v) => {
-                v.push(n);
+                v.push(Rc::new(n));
                 v.len() - 1
             }
             ASTNode::Gap(v) => {
-                v.push(n);
+                v.push(Rc::new(n));
                 v.len() - 1
             }
             _ => {
@@ -52,7 +54,7 @@ impl<'n> ASTNode<'n> {
         }
     }
 
-    pub fn get_children(&self) -> &Vec<Self> {
+    pub fn get_children(&self) -> &Vec<Rc<Self>> {
         match self {
             ASTNode::Sequence(_, v) => v,
             ASTNode::Root(v) => v,
@@ -60,7 +62,7 @@ impl<'n> ASTNode<'n> {
             _ => panic!("get_children called on a non-Sequence node: {}", self),
         }
     }
-    pub fn set_children(&mut self, nc: Vec<Self>) {
+    pub fn set_children(&mut self, nc: Vec<Rc<Self>>) {
         match self {
             ASTNode::Sequence(_, v) => *v = nc,
             ASTNode::Root(v) => *v = nc,

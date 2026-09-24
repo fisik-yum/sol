@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::sys::{ast::ASTNode, warnings::Error};
 
 pub trait Transform {
@@ -15,7 +17,7 @@ impl RemoveInteractive {
 }
 impl Transform for RemoveInteractive {
     fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
-        let filter: Vec<ASTNode> = root
+        let filter: Vec<Rc<ASTNode>> = root
             .get_children()
             .iter()
             .cloned()
@@ -34,7 +36,7 @@ impl KeepInteractive {
 }
 impl Transform for KeepInteractive {
     fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
-        let filter: Vec<ASTNode> = root
+        let filter: Vec<Rc<ASTNode>> = root
             .get_children()
             .iter()
             .cloned()
@@ -53,11 +55,11 @@ impl InteractiveMode {
 }
 impl Transform for InteractiveMode {
     fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
-        let filter: Vec<ASTNode> = root
+        let filter: Vec<Rc<ASTNode>> = root
             .get_children()
             .iter()
             .cloned()
-            .filter(|n| matches!(n, ASTNode::Sequence(_, _)) || n.is_interactive())
+            .filter(|n| matches!(**n, ASTNode::Sequence(_, _)) || n.is_interactive())
             .collect();
         root.set_children(filter);
         Ok(root)

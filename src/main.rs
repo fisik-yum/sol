@@ -39,7 +39,7 @@ fn main() {
 
     let mut pipe = Pipeline::new();
     pipe.add_stage(&transforms::RemoveInteractive);
-    let env = sys::interpreter::Environment::new(pipe);
+    let mut env = sys::interpreter::Environment::new(pipe);
 
     // ARG HANDLING CODE
     if args.tree {

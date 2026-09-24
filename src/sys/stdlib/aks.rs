@@ -15,7 +15,7 @@ pub fn count_a<'p>(root: &ASTNode, symbols: &SymbolTable) -> Result<StandardAksh
     let mut curr_nad = Mathrai(4);
 
     for n in child {
-        match n {
+        match &(**n) {
             ASTNode::Nad(u) => {
                 ret = ret + StandardAkshara::from_mathrai(accumulator, curr_nad);
                 accumulator = Mathrai(0);
@@ -30,7 +30,7 @@ pub fn count_a<'p>(root: &ASTNode, symbols: &SymbolTable) -> Result<StandardAksh
             }
             ASTNode::FnCall(s) => {
                 let target_fn_node = symbols.get(s)?;
-                let mc = mat::seq_count_m(target_fn_node)?;
+                let mc = mat::seq_count_m(&target_fn_node)?;
                 accumulator = accumulator + mc;
             }
             _ => {}

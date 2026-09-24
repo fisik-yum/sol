@@ -7,7 +7,7 @@ pub fn count_m<'p>(root: &ASTNode<'p>, symbols: &SymbolTable<'p>) -> Result<Math
         ASTNode::Figure(u) => return Ok(Mathrai(*u)),
         ASTNode::FnCall(s) => {
             let target_node = symbols.get(s)?;
-            res = res + seq_count_m(target_node)?;
+            res = res + seq_count_m(&target_node)?;
         }
         ASTNode::Root(v) => {
             for c in v {
@@ -33,11 +33,11 @@ pub fn seq_count_m<'p>(head: &ASTNode<'p>) -> Result<Mathrai, Error> {
     match head {
         ASTNode::Sequence(_s, children) => {
             for child in children {
-                match child {
+                match &**child {
                     ASTNode::Figure(u) => res = res + u,
                     ASTNode::Gap(sub_children) => {
                         for sub_child in sub_children {
-                            match sub_child {
+                            match **sub_child {
                                 ASTNode::Figure(u) => res = res + u,
                                 _ => return Err(Error::global("encountered illegal node in gap")),
                             }
