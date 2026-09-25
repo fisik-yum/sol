@@ -14,8 +14,8 @@ impl<'e> REPL<'e> {
     pub fn new() -> Self {
         let conf = Config::builder();
         let editor = Editor::with_history(conf.build(), MemHistory::new()).unwrap();
-        let mut pipeline = Pipeline::new();
-        pipeline.add_stage(&transforms::InteractiveMode);
+        let /*mut*/ pipeline = Pipeline::new();
+        //pipeline.add_stage(&transforms::InteractiveMode);
         Self {
             editor,
             environment: Environment::new(pipeline),
