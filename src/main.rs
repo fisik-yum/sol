@@ -1,7 +1,7 @@
 use clap::Parser;
 use sol::sys::interpreter::Pipeline;
 use sol::sys::{self, transforms};
-// mod repl;
+mod repl;
 use std::time;
 use std::{fs, path::Path};
 #[derive(Parser, Debug)]
@@ -22,7 +22,11 @@ fn main() {
     let args = Args::parse();
 
     if args.repl {
-        //repl::run();
+        let mut rep = repl::REPL::new();
+        if let Err(e) = rep.run() {
+            println!("REPL error: {:?}", e);
+        }
+        return;
     }
 
     let loc = &args.f.as_str();

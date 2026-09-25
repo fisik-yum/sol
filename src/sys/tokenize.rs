@@ -74,6 +74,14 @@ impl<'a> From<&'a str> for Tokenizer<'a> {
         }
     }
 }
+impl<'a> From<&'a String> for Tokenizer<'a> {
+    fn from(value: &'a String) -> Self {
+        Tokenizer {
+            chars: value.char_indices().peekable(),
+            source: value.as_str(),
+        }
+    }
+}
 
 impl<'a> Tokenizer<'a> {
     fn skip_whitespace(&mut self) {

@@ -1,43 +1,43 @@
-use std::collections::HashMap;
-
 use rustyline::error::ReadlineError;
 use rustyline::history::MemHistory;
-use rustyline::{Config, DefaultEditor, Editor, Result};
-use sol::sys::ast::ASTNode;
-use sol::sys::{self, Pipeline, Program, transforms};
-mod interpreter;
-struct Environment<'e> {
+use rustyline::{Config, Editor, Result};
+use sol::sys::interpreter::{Environment, Pipeline};
+use sol::sys::parser::parse;
+use sol::sys::{tokenize, transforms};
+
+pub struct REPL<'e> {
     editor: rustyline::Editor<(), MemHistory>,
-    file_list: HashMap<&'e str, Program<'e>>,
-    pipeline: Pipeline<'e>,
-    program: Program<'e>,
+    environment: Environment<'e>,
 }
 
-impl<'e> Environment<'e> {
+impl<'e> REPL<'e> {
     pub fn new() -> Self {
         let conf = Config::builder();
         let editor = Editor::with_history(conf.build(), MemHistory::new()).unwrap();
         let mut pipeline = Pipeline::new();
         pipeline.add_stage(&transforms::InteractiveMode);
         Self {
-            editor: editor,
-            file_list: HashMap::new(),
-            pipeline: pipeline,
-            program: Program::default(),
+            editor,
+            environment: Environment::new(pipeline),
         }
-        // TODO: curr set up so that tal is not considered,
     }
 
-    pub fn run(&self) -> Result<()> {
-        // `()` can be used when no completer is required
-        let mut rl = DefaultEditor::new()?;
+    pub fn run(&mut self) -> Result<()> {
         loop {
-            let readline = rl.readline("#>>>  ");
+            let readline = self.editor.readline("#>>>  ");
             match readline {
-                Ok(line) => {
-                    let commands = self.pipeline.ingest(line.as_str()).unwrap();
-                    for cmd in commands.root.get_children() {
-                        println!("{}", cmd)
+                Ok(read) => {
+                    let _ = self.editor.add_history_entry(read.as_str());
+                    let leaked_str: &'static str = Box::leak(read.into_boxed_str());
+                    let tokens = tokenize::Tokenizer::from(leaked_str);
+                    match parse(tokens) {
+                        Ok(ast) => {
+                            match self.environment.interpret(ast) {
+                                Ok(result) => println!("{}", result),
+                                Err(e) => println!("Error: {:?}", e),
+                            }
+                        }
+                        Err(e) => println!("Parse error: {:?}", e),
                     }
                 }
                 Err(ReadlineError::Interrupted) => {
@@ -55,21 +55,5 @@ impl<'e> Environment<'e> {
             }
         }
         Ok(())
-    }
-
-    fn execute_commands(&self, p: Program) {
-        for node in p.root.get_children().iter().cloned() {
-            self.execute_instruction(node);
-        }
-    }
-
-    fn execute_instruction(&self, n: ASTNode) {
-        match n {
-            ASTNode::Sequence(s,_)=>{
-                let loc = self.program.root.insert_node(n);
-                // i fogot what the args do
-                self.program.symbols.insert(s, loc, loc)
-            }
-        }
     }
 }
