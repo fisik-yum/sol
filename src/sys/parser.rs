@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::iter::Peekable;
+use std::rc::Rc;
 
 use crate::sys::ast::ASTNode;
 use crate::sys::tokenize::{Token, Tokenizer};
@@ -40,7 +41,7 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error> {
     let iter = tok_stream.by_ref();
     let mut stack = FrameStack { stack: Vec::new() };
     let mut tree = ASTNode::Root(vec![]);
-    
+
     while let Some(span) = iter.peek() {
         let pos = span.start();
         match span.token() {
@@ -204,8 +205,8 @@ fn parse_body<'a>(
             },
             Token::GapStart => match kind {
                 BodyKind::Seq => {
-                    let n = parse_gap(iter.by_ref(), stack)?;
-                    target.insert_node(n);
+                    let n = parse_gap_flat(iter.by_ref(), stack)?;
+                    target.insert_nodes(n);
                 }
                 BodyKind::Gap => {
                     return Err(Error::at(pos, "cannot nest gaps"));
@@ -279,4 +280,32 @@ fn parse_gap<'a>(
     };
     parse_body(iter, stack, BodyKind::Gap, &mut ret)?;
     Ok(ret)
+}
+
+// same as parse_gap, but returns the gap's children directly instead of
+// to avoid adding a level of AST depth
+fn parse_gap_flat<'a>(
+    iter: &mut Peekable<Tokenizer<'a>>,
+    stack: &mut FrameStack,
+) -> Result<Vec<Rc<ASTNode<'a>>>, Error> {
+    let mut ret = ASTNode::Gap(vec![]);
+    let sp1 = iter
+        .next()
+        .ok_or_else(|| Error::eof("expected '(' to start a gap"))?;
+    match sp1.token() {
+        Token::GapStart => {
+            stack.add_frame(Frame::Gap);
+        }
+        other => {
+            return Err(Error::at(
+                sp1.start(),
+                format!("expected '(' to start a gap, found {other}"),
+            ));
+        }
+    };
+    parse_body(iter, stack, BodyKind::Gap, &mut ret)?;
+    match ret {
+        ASTNode::Gap(v) => Ok(v),
+        _ => unreachable!(),
+    }
 }

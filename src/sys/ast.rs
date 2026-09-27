@@ -53,6 +53,16 @@ impl<'n> ASTNode<'n> {
             }
         }
     }
+    pub fn insert_nodes(&mut self, nodes: Vec<Rc<Self>>) {
+        match self {
+            ASTNode::Root(v) => v.extend(nodes),
+            ASTNode::Sequence(_, v) => v.extend(nodes),
+            ASTNode::Gap(v) => v.extend(nodes),
+            _ => {
+                panic!("unexpected behavior")
+            }
+        }
+    }
 
     pub fn get_children(&self) -> &Vec<Rc<Self>> {
         match self {
