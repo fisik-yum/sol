@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
+use std::fs;
+use std::path::Path;
 use std::rc::Rc;
 
 use talm::aks::{Carry, StandardAkshara};
@@ -7,21 +9,32 @@ use talm::unit::Mathrai;
 
 use crate::sys::ast::ASTNode;
 use crate::sys::warnings::Error;
-use crate::sys::{stdlib, transforms};
+use crate::sys::{self, stdlib, transforms};
 
 pub struct InterpreterResult {
+    text_fields: Vec<String>,
     total_mat_count: Mathrai,
     total_aks_count: StandardAkshara,
 }
 impl Display for InterpreterResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}/{}", self.total_mat_count, self.total_aks_count)
+        for s in self.text_fields.iter() {
+            let _ = writeln!(f, "{s}");
+        }
+        write!(
+            f,
+            "ParseResult: {}/{}",
+            self.total_mat_count, self.total_aks_count
+        )
     }
 }
 
 pub struct Environment<'p> {
     stages: Pipeline<'p>,
     pub sym_table: SymbolTable<'p>,
+    nadai: Mathrai,
+    talam: Option<usize>,
+    memo: HashMap<&'p str, Mathrai>,
 }
 
 impl<'p> Environment<'p> {
@@ -29,99 +42,110 @@ impl<'p> Environment<'p> {
         Self {
             stages: p,
             sym_table: SymbolTable::default(),
+            nadai: Mathrai(4),
+            talam: None,
+            memo: HashMap::new(),
         }
     }
+
+    /*
+     * the interpreter sequentially builds the symbol table as it evaluates
+     * a program.
+     * The symbol table is a shared state of the interpreter environment.
+     */
     pub fn interpret(&mut self, mut root: ASTNode<'p>) -> Result<InterpreterResult, Error> {
         root = self.stages.ingest(root)?;
-        let result = interpret(&root, &mut self.sym_table)?;
-        Ok(result)
-    }
-}
 
-/*
- * the interpreter sequentially builds the symbol table as it evaluates
- * a program.
- * The symbol table is a shared state of the interpreter environment.
- */
-fn interpret<'p>(
-    root: &ASTNode<'p>,
-    symbols: &mut SymbolTable<'p>,
-) -> Result<InterpreterResult, Error> {
-    let children = root.get_children();
+        let children = root.get_children();
 
-    // interpreter state
-    let mut memo: HashMap<&str, Mathrai> = HashMap::new();
-    // program parameters; default nadai is 4 (by convention)
-    let mut talam: Option<usize> = None;
-    let mut nadai = Mathrai(4);
-    // accumulators
-    let mut mat_count = Mathrai(0);
-    let mut aks_count = StandardAkshara {
-        count: 0,
-        edam: Carry {
-            num: 0,
-            den: nadai.0,
-        },
-    };
+        // accumulators
+        let mut mat_count = Mathrai(0);
+        let mut aks_count = StandardAkshara {
+            count: 0,
+            edam: Carry {
+                num: 0,
+                den: self.nadai.0,
+            },
+        };
+        let mut text_fields: Vec<String> = vec![];
 
-    for child in children {
-        match &(**child) {
-            ASTNode::Tal(u) => {
-                if talam.is_none() {
-                    talam = Some(*u);
-                } else {
-                    return Err(Error::global("cannot redeclare tal param"));
-                }
-            }
-            ASTNode::Nad(u) => {
-                nadai = Mathrai(*u);
-            }
-            ASTNode::Sequence(s, _) => {
-                symbols.insert(s, Rc::clone(child))?;
-            }
-            ASTNode::Figure(u) => {
-                mat_count = mat_count + Mathrai(*u);
-                aks_count = aks_count + StandardAkshara::from_mathrai(Mathrai(*u), nadai);
-            }
-            ASTNode::Gap(v) => {
-                if talam.is_none() {
-                    return Err(Error::global("tal param left undeclared"));
-                }
-                let mut count = Mathrai(0);
-                for fig in v {
-                    match **fig {
-                        ASTNode::Figure(u) => {
-                            count = count + Mathrai(u);
-                        }
-                        _ => return Err(Error::global("some unidentified error")),
+        for child in children {
+            match &(**child) {
+                ASTNode::Tal(u) => {
+                    if self.talam.is_none() {
+                        self.talam = Some(*u);
+                    } else {
+                        return Err(Error::global("cannot redeclare tal param"));
                     }
                 }
-                mat_count = mat_count + count;
-                aks_count = aks_count + StandardAkshara::from_mathrai(count, nadai);
-            }
-            ASTNode::FnCall(f) => {
-                if talam.is_none() {
-                    return Err(Error::global("tal param left undeclared"));
+                ASTNode::Nad(u) => {
+                    self.nadai = Mathrai(*u);
                 }
-                let count: Mathrai;
-                if memo.contains_key(f) {
-                    count = memo.get(f).unwrap().clone();
-                } else {
-                    let seq = symbols.get(f)?;
-                    count = stdlib::mat::seq_count_m(&seq)?;
-                    memo.insert(f, count);
+                ASTNode::Sequence(s, _) => {
+                    self.sym_table.insert(s, Rc::clone(child))?;
+                    self.memo.insert(s, stdlib::mat::seq_count_m(child)?);
                 }
-                mat_count = mat_count + count;
-                aks_count = aks_count + StandardAkshara::from_mathrai(count, nadai);
+                ASTNode::Figure(u) => {
+                    if self.talam.is_none() {
+                        return Err(Error::global("tal param left undeclared"));
+                    }
+                    mat_count = mat_count + Mathrai(*u);
+                    aks_count = aks_count + StandardAkshara::from_mathrai(Mathrai(*u), self.nadai);
+                }
+                ASTNode::Gap(v) => {
+                    if self.talam.is_none() {
+                        return Err(Error::global("tal param left undeclared"));
+                    }
+                    let mut count = Mathrai(0);
+                    for fig in v {
+                        match **fig {
+                            ASTNode::Figure(u) => {
+                                count = count + Mathrai(u);
+                            }
+                            _ => return Err(Error::global("some unidentified error")),
+                        }
+                    }
+                    mat_count = mat_count + count;
+                    aks_count = aks_count + StandardAkshara::from_mathrai(count, self.nadai);
+                }
+                ASTNode::FnCall(f) => {
+                    if self.talam.is_none() {
+                        return Err(Error::global("tal param left undeclared"));
+                    }
+                    let count: Mathrai;
+                    if self.memo.contains_key(f) {
+                        count = self.memo.get(f).unwrap().clone();
+                    } else {
+                        let seq = self.sym_table.get(f)?;
+                        count = stdlib::mat::seq_count_m(&seq)?;
+                        self.memo.insert(f, count);
+                    }
+                    mat_count = mat_count + count;
+                    aks_count = aks_count + StandardAkshara::from_mathrai(count, self.nadai);
+                }
+                ASTNode::Inspect(f) => {
+                    if self.memo.contains_key(f) {
+                        text_fields.push(format!("{}", self.memo.get(f).unwrap()));
+                    } else {
+                        return Err(Error::global("undeclared sequence"));
+                    }
+                }
+                ASTNode::Reload => {
+                    self.talam = None;
+                    self.nadai = Mathrai(4);
+                    text_fields.push("interpreter reloaded".to_string());
+                }
+                _ => {}
             }
-            _ => {}
         }
+        let result = InterpreterResult {
+            text_fields: text_fields,
+            total_mat_count: mat_count,
+            total_aks_count: aks_count,
+        };
+
+        Ok(result)
     }
-    let result = InterpreterResult {
-        total_mat_count: mat_count,
-        total_aks_count: aks_count,
-    };
-    Ok(result)
 }
 
 pub struct Pipeline<'p> {
