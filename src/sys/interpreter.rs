@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
+use std::ops::Add;
 use std::rc::Rc;
 
 use talm::aks::{Carry, StandardAkshara};
@@ -26,10 +27,22 @@ impl Display for InterpreterResult {
         )
     }
 }
+impl Add for InterpreterResult {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut tf = self.text_fields;
+        tf.extend(rhs.text_fields);
+        return Self {
+            text_fields: tf,
+            total_aks_count: self.total_aks_count + rhs.total_aks_count,
+            total_mat_count: self.total_mat_count + rhs.total_mat_count,
+        };
+    }
+}
 
 pub struct Environment<'p> {
     stages: Pipeline<'p>,
-    pub sym_table: SymbolTable<'p>,
+    pub sym_table: HashMap<&'p str, Rc<ASTNode<'p>>>,
     nadai: Mathrai,
     talam: Option<usize>,
     memo: HashMap<&'p str, Mathrai>,
@@ -39,7 +52,7 @@ impl<'p> Environment<'p> {
     pub fn new(p: Pipeline<'p>) -> Self {
         Self {
             stages: p,
-            sym_table: SymbolTable::default(),
+            sym_table: HashMap::new(),
             nadai: Mathrai(4),
             talam: None,
             memo: HashMap::new(),
@@ -51,7 +64,7 @@ impl<'p> Environment<'p> {
      * a program.
      * The symbol table is a shared state of the interpreter environment.
      */
-    pub fn interpret(&mut self, mut root: ASTNode<'p>) -> Result<InterpreterResult, Error> {
+    pub fn interpret(&mut self, mut root: ASTNode<'p>) -> Result<InterpreterResult, Error<'_>> {
         root = self.stages.ingest(root)?;
 
         let children = root.get_children();
@@ -73,26 +86,26 @@ impl<'p> Environment<'p> {
                     if self.talam.is_none() {
                         self.talam = Some(*u);
                     } else {
-                        return Err(Error::global("cannot redeclare tal param"));
+                        return Err(Error::environment("cannot redeclare tal param".to_string()));
                     }
                 }
                 ASTNode::Nad(u) => {
                     self.nadai = Mathrai(*u);
                 }
                 ASTNode::Sequence(s, _) => {
-                    self.sym_table.insert(s, Rc::clone(child))?;
+                    self.sym_table.insert(s, Rc::clone(child));
                     self.memo.insert(s, stdlib::mat::seq_count_m(child)?);
                 }
                 ASTNode::Figure(u) => {
                     if self.talam.is_none() {
-                        return Err(Error::global("tal param left undeclared"));
+                        return Err(Error::environment("tal param left undeclared".to_string()));
                     }
                     mat_count = mat_count + Mathrai(*u);
                     aks_count = aks_count + StandardAkshara::from_mathrai(Mathrai(*u), self.nadai);
                 }
                 ASTNode::Gap(v) => {
                     if self.talam.is_none() {
-                        return Err(Error::global("tal param left undeclared"));
+                        return Err(Error::environment("tal param left undeclared".to_string()));
                     }
                     let mut count = Mathrai(0);
                     for fig in v {
@@ -100,7 +113,11 @@ impl<'p> Environment<'p> {
                             ASTNode::Figure(u) => {
                                 count = count + Mathrai(u);
                             }
-                            _ => return Err(Error::global("some unidentified error")),
+                            _ => {
+                                return Err(Error::environment(
+                                    "some unidentified error".to_string(),
+                                ));
+                            }
                         }
                     }
                     mat_count = mat_count + count;
@@ -108,14 +125,14 @@ impl<'p> Environment<'p> {
                 }
                 ASTNode::FnCall(f) => {
                     if self.talam.is_none() {
-                        return Err(Error::global("tal param left undeclared"));
+                        return Err(Error::environment("tal param left undeclared".to_string()));
                     }
                     let count: Mathrai;
                     if self.memo.contains_key(f) {
                         count = self.memo.get(f).unwrap().clone();
                     } else {
-                        let seq = self.sym_table.get(f)?;
-                        count = stdlib::mat::seq_count_m(&seq)?;
+                        let seq = self.sym_table.get(f);
+                        count = stdlib::mat::seq_count_m(&seq.unwrap())?;
                         self.memo.insert(f, count);
                     }
                     mat_count = mat_count + count;
@@ -125,7 +142,7 @@ impl<'p> Environment<'p> {
                     if self.memo.contains_key(f) {
                         text_fields.push(format!("{}", self.memo.get(f).unwrap()));
                     } else {
-                        return Err(Error::global("undeclared sequence"));
+                        return Err(Error::environment("undeclared sequence".to_string()));
                     }
                 }
                 ASTNode::Reload => {
@@ -166,58 +183,5 @@ impl<'p> Pipeline<'p> {
             input = stage.mutate(input).unwrap();
         }
         Ok(input)
-    }
-}
-
-pub struct SymbolTable<'p> {
-    table: HashMap<&'p str, Rc<ASTNode<'p>>>,
-}
-
-impl<'p> SymbolTable<'p> {
-    pub fn new(root: &ASTNode<'p>) -> Result<Self, Error> {
-        let mut ret = Self {
-            table: HashMap::new(),
-        };
-
-        let children = root.get_children().as_slice();
-
-        for i in 0..children.len() {
-            let child = &children[i];
-            match **child {
-                ASTNode::Sequence(s, _) => {
-                    ret.insert(s, Rc::clone(child))?;
-                }
-                _ => {}
-            };
-        }
-        Ok(ret)
-    }
-    pub fn insert(&mut self, k: &'p str, node: Rc<ASTNode<'p>>) -> Result<(), Error> {
-        if self.table.contains_key(k) {
-            return Err(Error::global(format!("sequence redefined: {k}")));
-        }
-        self.table.insert(k, node);
-        Ok(())
-    }
-
-    pub fn get(&self, k: &str) -> Result<Rc<ASTNode<'p>>, Error> {
-        self.table
-            .get(k)
-            .cloned()
-            .ok_or_else(|| Error::global(format!("undefined sequence: {k}")))
-    }
-}
-
-impl<'s> Default for SymbolTable<'s> {
-    fn default() -> Self {
-        return Self {
-            table: HashMap::new(),
-        };
-    }
-}
-
-impl std::fmt::Display for SymbolTable<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.table.fmt(f)
     }
 }

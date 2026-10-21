@@ -1,6 +1,4 @@
-use std::fmt::Debug;
 use std::iter::Peekable;
-use std::rc::Rc;
 
 use crate::sys::ast::ASTNode;
 use crate::sys::tokenize::{Token, Tokenizer};
@@ -48,54 +46,54 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error> {
     Ok(tree)
 }
 
-fn parse_tal<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+fn parse_tal<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
     iter.next();
-    if let Some(span) = iter.next() {
+    if let Some(span) = iter.next_if(|x| x.is(Token::Figure)) {
         let val: usize = span.text().parse().unwrap(); // TODO: remove unwrap
         return Ok(ASTNode::Tal(val));
     }
-    panic!()
+    return Err(fallback_error(iter));
 }
-fn parse_nad<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+fn parse_nad<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
     iter.next();
-    if let Some(span) = iter.next() {
+    if let Some(span) = iter.next_if(|x| x.is(Token::Figure)) {
         let val: usize = span.text().parse().unwrap(); // TODO: remove unwrap
         return Ok(ASTNode::Nad(val));
     }
-    panic!()
+    return Err(fallback_error(iter));
 }
 
-fn parse_fig<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
-    if let Some(span) = iter.next() {
-        let val: usize = span.text().parse().unwrap(); // TODO: remove unwrap
+fn parse_fig<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
+    if let Some(span) = iter.next_if(|x| x.is(Token::Figure)) {
+        let val: usize = span.text().parse().unwrap(); 
         return Ok(ASTNode::Figure(val));
     }
-    panic!()
+    return Err(fallback_error(iter));
 }
-fn parse_fcl<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
-    if let Some(span) = iter.next() {
+fn parse_fcl<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
+    if let Some(span) = iter.next_if(|x| x.is(Token::Literal)) {
         let val: &str = span.text();
         return Ok(ASTNode::FnCall(val));
     }
-    panic!()
+    return Err(fallback_error(iter));
 }
-fn parse_lod<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+fn parse_lod<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
     iter.next();
-    if let Some(span) = iter.next() {
+    if let Some(span) = iter.next_if(|x| x.is(Token::Literal)) {
         let val: &str = span.text();
         return Ok(ASTNode::Load(val));
     }
-    panic!()
+    return Err(fallback_error(iter));
 }
-fn parse_ins<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+fn parse_ins<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
     iter.next();
-    if let Some(span) = iter.next() {
+    if let Some(span) = iter.next_if(|x| x.is(Token::Literal)) {
         let val: &str = span.text();
         return Ok(ASTNode::Inspect(val));
     }
-    panic!()
+    return Err(fallback_error(iter));
 }
-fn parse_seq<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+fn parse_seq<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
     iter.next();
     // TODO: reorg into less bp
     if let Some(mark) = iter.next_if(|x| x.is(Token::Literal)) {
@@ -105,21 +103,29 @@ fn parse_seq<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Erro
                 if span.text() == "}" && span.is(Token::Control) {
                     iter.next();
                     return Ok(seq);
-                }else if span.text() == "{" && span.is(Token::Control) {
-                    return Err(Error::at(span.start(), "wrong control token"));
+                } else if span.text() == "{" && span.is(Token::Control) {
+                    return Err(Error::parser(*span));
                 }
                 match span.token() {
                     Token::Figure => {
                         seq.insert_node(parse_fig(iter)?);
                     }
                     Token::Control => {
-                        // TODO: throw errors
+                        // filters to only gap () syntactic sugar, so we don't care
                         iter.next();
                     }
-                    _ => {}
+                    _ => {
+                        return Err(Error::parser(*span));
+                    }
                 }
             }
         }
-    } 
-    panic!()
+    }
+    return Err(fallback_error(iter));
+}
+fn fallback_error<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Error<'p> {
+    if let Some(err_token) = iter.next() {
+        return Error::parser(err_token);
+    }
+    return Error::global("Parser: token stream ended abruptly.".to_string());
 }

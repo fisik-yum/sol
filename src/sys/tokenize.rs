@@ -4,7 +4,7 @@ use std::{
     io::{BufReader, Read},
     iter::Peekable,
 };
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Token {
     Seq,     // keyword `seq`
     Sol,     // keyword `sol` (holds root program)
@@ -19,6 +19,7 @@ pub enum Token {
     Inspect,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Span<'s> {
     start: usize,
     end: usize,
@@ -48,6 +49,18 @@ impl<'s> Span<'s> {
     pub fn is(&self, token: Token) -> bool {
         return self.token == token;
     }
+    pub fn to_line(&self) -> (usize, usize) {
+        let mut row: usize = 1;
+        let mut col: usize = 0;
+        for (i, c) in self.source[..self.start + 1].char_indices() {
+            if c == '\n' || c == '\r' {
+                row += 1;
+                col = 0;
+            }
+            col += 1;
+        }
+        (row, col)
+    }
 }
 
 // TODO: move this implementation to Span
@@ -69,6 +82,8 @@ impl std::fmt::Display for Token {
         }
     }
 }
+
+#[derive(Debug, Clone)]
 pub struct Tokenizer<'a> {
     chars: Peekable<CharIndices<'a>>,
     source: &'a str,

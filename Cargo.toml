@@ -6,6 +6,7 @@ edition = "2024"
 [lints.clippy] # Use [lints.clippy] if not in a workspace
 panic = "deny"
 [dependencies]
+ariadne = "0.6.0"
 clap = { version = "4.6.6", features = ["derive"] }
 rustyline = "18.0.1"
 talm = { git = "https://github.com/fisik-yum/talm.git"}
