@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::sys::{ast::ASTNode, warnings::Error};
 
 pub trait Transform {
-    fn mutate<'m>(&self, _root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
+    fn mutate<'m>(&self, _root: ASTNode<'m>) -> Result<ASTNode<'m>, Error<'m>> {
         Err(Error::global("invalid transform".to_string()))
     }
 }
@@ -16,7 +16,7 @@ impl RemoveInteractive {
     }
 }
 impl Transform for RemoveInteractive {
-    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
+    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error<'m>> {
         let filter: Vec<Rc<ASTNode>> = root
             .get_children()
             .iter()
@@ -35,7 +35,7 @@ impl KeepInteractive {
     }
 }
 impl Transform for KeepInteractive {
-    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
+    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error<'m>> {
         let filter: Vec<Rc<ASTNode>> = root
             .get_children()
             .iter()
@@ -54,7 +54,7 @@ impl InteractiveMode {
     }
 }
 impl Transform for InteractiveMode {
-    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
+    fn mutate<'m>(&self, mut root: ASTNode<'m>) -> Result<ASTNode<'m>, Error<'m>> {
         let filter: Vec<Rc<ASTNode>> = root
             .get_children()
             .iter()

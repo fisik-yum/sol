@@ -1,6 +1,5 @@
 use clap::Parser;
 use sol::sys::interpreter::Pipeline;
-use sol::sys::warnings::Error;
 use sol::sys::{self, transforms};
 mod repl;
 use std::time;

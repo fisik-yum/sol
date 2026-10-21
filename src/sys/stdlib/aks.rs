@@ -29,10 +29,6 @@ pub fn count_a<'p>(
             ASTNode::Figure(u) => {
                 accumulator = accumulator + Mathrai(*u);
             }
-            ASTNode::Gap(_) => {
-                let mc = mat::count_m(n, symbols.clone())?;
-                accumulator = accumulator + mc;
-            }
             ASTNode::FnCall(s) => {
                 let target_fn_node = symbols.get(s).unwrap();
                 let mc = mat::seq_count_m(&target_fn_node)?;

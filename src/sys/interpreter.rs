@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 use std::ops::Add;
 use std::rc::Rc;
 
@@ -103,26 +103,6 @@ impl<'p> Environment<'p> {
                     mat_count = mat_count + Mathrai(*u);
                     aks_count = aks_count + StandardAkshara::from_mathrai(Mathrai(*u), self.nadai);
                 }
-                ASTNode::Gap(v) => {
-                    if self.talam.is_none() {
-                        return Err(Error::environment("tal param left undeclared".to_string()));
-                    }
-                    let mut count = Mathrai(0);
-                    for fig in v {
-                        match **fig {
-                            ASTNode::Figure(u) => {
-                                count = count + Mathrai(u);
-                            }
-                            _ => {
-                                return Err(Error::environment(
-                                    "some unidentified error".to_string(),
-                                ));
-                            }
-                        }
-                    }
-                    mat_count = mat_count + count;
-                    aks_count = aks_count + StandardAkshara::from_mathrai(count, self.nadai);
-                }
                 ASTNode::FnCall(f) => {
                     if self.talam.is_none() {
                         return Err(Error::environment("tal param left undeclared".to_string()));
@@ -178,7 +158,7 @@ impl<'p> Pipeline<'p> {
         self.transform_path.push(stage);
     }
 
-    pub fn ingest(&self, mut input: ASTNode<'p>) -> Result<ASTNode<'p>, Error> {
+    pub fn ingest(&self, mut input: ASTNode<'p>) -> Result<ASTNode<'p>, Error<'p>> {
         for stage in self.transform_path.as_slice() {
             input = stage.mutate(input).unwrap();
         }

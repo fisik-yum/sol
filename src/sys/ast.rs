@@ -7,7 +7,6 @@ pub enum ASTNode<'t> {
     Nad(usize),
     Sequence(&'t str, Vec<Rc<Self>>),
     FnCall(&'t str),
-    Gap(Vec<Rc<Self>>),
     Figure(usize),
 
     Reload,
@@ -23,7 +22,6 @@ impl<'t> std::fmt::Display for ASTNode<'t> {
             ASTNode::Tal(u) => write!(f, "tal {u}"),
             ASTNode::Nad(u) => write!(f, "nad {u}"),
             ASTNode::FnCall(s) => write!(f, "{s}"),
-            ASTNode::Gap(_) => write!(f, "gap"),
             ASTNode::Figure(n) => write!(f, "{n}"),
 
             ASTNode::Reload => write!(f, "reload"),
@@ -44,10 +42,6 @@ impl<'n> ASTNode<'n> {
                 v.push(Rc::new(n));
                 v.len() - 1
             }
-            ASTNode::Gap(v) => {
-                v.push(Rc::new(n));
-                v.len() - 1
-            }
             _ => {
                 panic!("unexpected behavior")
             }
@@ -57,18 +51,15 @@ impl<'n> ASTNode<'n> {
         match self {
             ASTNode::Root(v) => v.extend(nodes),
             ASTNode::Sequence(_, v) => v.extend(nodes),
-            ASTNode::Gap(v) => v.extend(nodes),
             _ => {
                 panic!("unexpected behavior")
             }
         }
     }
-
     pub fn get_children(&self) -> &Vec<Rc<Self>> {
         match self {
             ASTNode::Sequence(_, v) => v,
             ASTNode::Root(v) => v,
-            ASTNode::Gap(v) => v,
             _ => panic!("get_children called on a non-Sequence node: {}", self),
         }
     }
@@ -76,7 +67,6 @@ impl<'n> ASTNode<'n> {
         match self {
             ASTNode::Sequence(_, v) => *v = nc,
             ASTNode::Root(v) => *v = nc,
-            ASTNode::Gap(v) => *v = nc,
             _ => panic!("set_children called on a non-Sequence node: {}", self),
         }
     }
@@ -84,7 +74,6 @@ impl<'n> ASTNode<'n> {
         let c = match self {
             ASTNode::Sequence(_, v) => v,
             ASTNode::Root(v) => v,
-            ASTNode::Gap(v) => v,
             _ => panic!("get_child called on a non-Sequence node: {}", self),
         };
         return &c[idx];
@@ -120,13 +109,6 @@ impl<'n> ASTNode<'n> {
                 }
             }
             ASTNode::Sequence(_, v) => {
-                let count = v.len();
-                for (i, child) in v.iter().enumerate() {
-                    let is_last_child = i == count - 1;
-                    child.dfs(&child_prefix, is_last_child);
-                }
-            }
-            ASTNode::Gap(v) => {
                 let count = v.len();
                 for (i, child) in v.iter().enumerate() {
                     let is_last_child = i == count - 1;

@@ -4,7 +4,7 @@ use crate::sys::ast::ASTNode;
 use crate::sys::tokenize::{Token, Tokenizer};
 use crate::sys::warnings::Error;
 
-pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error> {
+pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error<'p>> {
     // builds an AST object
     let mut tok_stream = tokenizer.peekable();
     let iter = tok_stream.by_ref();
@@ -65,7 +65,7 @@ fn parse_nad<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Erro
 
 fn parse_fig<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
     if let Some(span) = iter.next_if(|x| x.is(Token::Figure)) {
-        let val: usize = span.text().parse().unwrap(); 
+        let val: usize = span.text().parse().unwrap();
         return Ok(ASTNode::Figure(val));
     }
     return Err(fallback_error(iter));

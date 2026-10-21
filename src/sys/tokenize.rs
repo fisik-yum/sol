@@ -52,7 +52,7 @@ impl<'s> Span<'s> {
     pub fn to_line(&self) -> (usize, usize) {
         let mut row: usize = 1;
         let mut col: usize = 0;
-        for (i, c) in self.source[..self.start + 1].char_indices() {
+        for (_, c) in self.source[..self.start + 1].char_indices() {
             if c == '\n' || c == '\r' {
                 row += 1;
                 col = 0;

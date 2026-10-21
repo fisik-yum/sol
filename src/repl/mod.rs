@@ -3,7 +3,7 @@ use rustyline::history::MemHistory;
 use rustyline::{Config, Editor, Result};
 use sol::sys::interpreter::{Environment, Pipeline};
 use sol::sys::parser::parse;
-use sol::sys::{tokenize, transforms};
+use sol::sys::tokenize;
 
 pub struct REPL<'e> {
     editor: rustyline::Editor<(), MemHistory>,
@@ -31,12 +31,10 @@ impl<'e> REPL<'e> {
                     let leaked_str: &'static str = Box::leak(read.into_boxed_str());
                     let tokens = tokenize::Tokenizer::from(leaked_str);
                     match parse(tokens) {
-                        Ok(ast) => {
-                            match self.environment.interpret(ast) {
-                                Ok(result) => println!("{}", result),
-                                Err(e) => println!("Error: {:?}", e),
-                            }
-                        }
+                        Ok(ast) => match self.environment.interpret(ast) {
+                            Ok(result) => println!("{}", result),
+                            Err(e) => println!("Error: {:?}", e),
+                        },
                         Err(e) => println!("Parse error: {:?}", e),
                     }
                 }

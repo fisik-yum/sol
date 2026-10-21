@@ -19,11 +19,6 @@ pub fn count_m<'p>(
                 res = res + count_m(c, symbols.clone())?;
             }
         }
-        ASTNode::Gap(v) => {
-            for c in v {
-                res = res + count_m(c, symbols.clone())?;
-            }
-        }
         ASTNode::Sequence(_, _) => {
             return Ok(Mathrai(0));
         }
@@ -40,19 +35,6 @@ pub fn seq_count_m<'p>(head: &ASTNode<'p>) -> Result<Mathrai, Error<'p>> {
             for child in children {
                 match &**child {
                     ASTNode::Figure(u) => res = res + u,
-                    ASTNode::Gap(sub_children) => {
-                        for sub_child in sub_children {
-                            match **sub_child {
-                                ASTNode::Figure(u) => res = res + u,
-                                _ => {
-                                    return Err(Error::global(
-                                        "encountered illegal node in gap".to_string(),
-                                    ));
-                                }
-                            }
-                        }
-                    }
-
                     _ => {
                         return Err(Error::global(
                             "encountered illegal node in sequence".to_string(),
