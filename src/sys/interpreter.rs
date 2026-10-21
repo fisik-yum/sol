@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Display};
-use std::fs;
-use std::path::Path;
 use std::rc::Rc;
 
 use talm::aks::{Carry, StandardAkshara};
@@ -9,7 +7,7 @@ use talm::unit::Mathrai;
 
 use crate::sys::ast::ASTNode;
 use crate::sys::warnings::Error;
-use crate::sys::{self, stdlib, transforms};
+use crate::sys::{stdlib, transforms};
 
 pub struct InterpreterResult {
     text_fields: Vec<String>,

@@ -6,306 +6,120 @@ use crate::sys::ast::ASTNode;
 use crate::sys::tokenize::{Token, Tokenizer};
 use crate::sys::warnings::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Frame {
-    Seq,
-    Gap,
-}
-
-pub struct FrameStack {
-    stack: Vec<Frame>,
-}
-impl FrameStack {
-    pub fn add_frame(&mut self, state: Frame) {
-        self.stack.push(state);
-    }
-
-    pub fn match_last(&mut self, state: &Frame) -> bool {
-        if let Some(last) = self.stack.last() {
-            if last == state {
-                return true;
-            }
-            return false;
-        };
-        return false;
-    }
-
-    pub fn pop_last(&mut self) {
-        self.stack.pop();
-    }
-}
-
 pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error> {
     // builds an AST object
     let mut tok_stream = tokenizer.peekable();
     let iter = tok_stream.by_ref();
-    let mut stack = FrameStack { stack: Vec::new() };
     let mut tree = ASTNode::Root(vec![]);
 
     while let Some(span) = iter.peek() {
-        let pos = span.start();
         match span.token() {
-            Token::Seq => {
-                iter.next();
-                let n = parse_seq(iter.by_ref(), &mut stack)?;
-                let _idx = tree.insert_node(n);
-            }
-            Token::Sol => {
-                return Err(Error::at(pos, "use of restricted keyword 'sol'"));
-            }
             Token::Tal => {
-                iter.next();
-                let (n, _) = parse_tal(iter.by_ref())?;
-                let _ = tree.insert_node(n);
+                tree.insert_node(parse_tal(iter)?);
             }
             Token::Nad => {
-                iter.next();
-                let n = parse_nad(iter.by_ref())?;
-                let _ = tree.insert_node(n);
+                tree.insert_node(parse_nad(iter)?);
             }
-            Token::Literal(s) => {
-                tree.insert_node(ASTNode::FnCall(*s));
-                iter.next();
+            Token::Seq => {
+                tree.insert_node(parse_seq(iter)?);
             }
-            Token::Figure(u) => {
-                tree.insert_node(ASTNode::Figure(*u));
-                iter.next();
+            Token::Literal => {
+                tree.insert_node(parse_fcl(iter)?);
             }
-            Token::SeqStart => {
-                return Err(Error::at(pos, "unexpected '{' (anonymous sequence)"));
-            }
-            Token::SeqEnd => {
-                return Err(Error::at(pos, "unexpected '}' (no matching sequence)"));
-            }
-            Token::GapStart => {
-                let n = parse_gap(iter.by_ref(), &mut stack)?;
-                tree.insert_node(n);
-            }
-            Token::GapEnd => {
-                return Err(Error::at(pos, "unexpected ')' (no matching gap)"));
+            Token::Figure => {
+                tree.insert_node(parse_fig(iter)?);
             }
             Token::Load => {
-                iter.next();
-                let name = parse_ident(iter)?;
-                tree.insert_node(ASTNode::Load(name));
+                tree.insert_node(parse_lod(iter)?);
             }
             Token::Inspect => {
-                iter.next();
-                let name = parse_ident(iter)?;
-                tree.insert_node(ASTNode::Inspect(name));
+                tree.insert_node(parse_ins(iter)?);
             }
             Token::Reload => {
-                iter.next();
                 tree.insert_node(ASTNode::Reload);
             }
+            Token::Control => {
+                // TODO: throw errors
+                iter.next();
+            }
+            _ => {}
         }
     }
     Ok(tree)
 }
 
-fn parse_ident<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<&'a str, Error> {
-    let span = iter
-        .next()
-        .ok_or_else(|| Error::eof("expected an identifier"))?;
-    let pos = span.start();
-    match span.token() {
-        Token::Literal(s) => Ok(s),
-        other => Err(Error::at(
-            pos,
-            format!("expected an identifier, found {other}"),
-        )),
+fn parse_tal<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+    iter.next();
+    if let Some(span) = iter.next() {
+        let val: usize = span.text().parse().unwrap(); // TODO: remove unwrap
+        return Ok(ASTNode::Tal(val));
     }
+    panic!()
 }
-fn parse_figure<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<usize, Error> {
-    let span = iter.next().ok_or_else(|| Error::eof("expected a figure"))?;
-    let pos = span.start();
-    match span.token() {
-        Token::Figure(u) => Ok(*u),
-        other => Err(Error::at(pos, format!("expected an figure, found {other}"))),
+fn parse_nad<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+    iter.next();
+    if let Some(span) = iter.next() {
+        let val: usize = span.text().parse().unwrap(); // TODO: remove unwrap
+        return Ok(ASTNode::Nad(val));
     }
+    panic!()
 }
 
-fn parse_tal<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<(ASTNode<'a>, usize), Error> {
-    let u = parse_figure(iter)?;
-    return Ok((ASTNode::Tal(u), u));
-}
-
-fn parse_nad<'a>(iter: &mut Peekable<Tokenizer<'a>>) -> Result<ASTNode<'a>, Error> {
-    let u = parse_figure(iter)?;
-    return Ok(ASTNode::Nad(u));
-}
-#[derive(Clone, Copy)]
-enum BodyKind {
-    Seq,
-    Gap,
-}
-
-impl BodyKind {
-    fn name(&self) -> &'static str {
-        match self {
-            BodyKind::Seq => "a sequence",
-            BodyKind::Gap => "a gap",
-        }
+fn parse_fig<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+    if let Some(span) = iter.next() {
+        let val: usize = span.text().parse().unwrap(); // TODO: remove unwrap
+        return Ok(ASTNode::Figure(val));
     }
+    panic!()
 }
-
-fn parse_body<'a>(
-    iter: &mut Peekable<Tokenizer<'a>>,
-    stack: &mut FrameStack,
-    kind: BodyKind,
-    target: &mut ASTNode<'a>,
-) -> Result<(), Error> {
-    while let Some(span) = iter.peek() {
-        let pos = span.start();
-        match span.token() {
-            Token::Seq => {
-                return Err(Error::at(pos, "cannot nest a sequence definition"));
-            }
-            Token::Sol => {
-                return Err(Error::at(pos, "use of restricted keyword 'sol'"));
-            }
-            Token::Tal => {
-                return Err(Error::at(
-                    pos,
-                    format!("cannot invoke 'tal' inside {}", kind.name()),
-                ));
-            }
-            Token::Nad => {
-                return Err(Error::at(
-                    pos,
-                    format!("cannot invoke 'nad' inside {}", kind.name()),
-                ));
-            }
-            Token::Literal(s) => {
-                return Err(Error::at(
-                    pos,
-                    format!("cannot call '{s}' inside {}", kind.name()),
-                ));
-            }
-            Token::Figure(u) => {
-                target.insert_node(ASTNode::Figure(*u));
-                iter.next();
-            }
-            Token::SeqStart => {
-                return Err(Error::at(pos, "unexpected '{' (anonymous sequence)"));
-            }
-            Token::SeqEnd => match kind {
-                BodyKind::Seq => {
+fn parse_fcl<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+    if let Some(span) = iter.next() {
+        let val: &str = span.text();
+        return Ok(ASTNode::FnCall(val));
+    }
+    panic!()
+}
+fn parse_lod<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+    iter.next();
+    if let Some(span) = iter.next() {
+        let val: &str = span.text();
+        return Ok(ASTNode::Load(val));
+    }
+    panic!()
+}
+fn parse_ins<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+    iter.next();
+    if let Some(span) = iter.next() {
+        let val: &str = span.text();
+        return Ok(ASTNode::Inspect(val));
+    }
+    panic!()
+}
+fn parse_seq<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error> {
+    iter.next();
+    // TODO: reorg into less bp
+    if let Some(mark) = iter.next_if(|x| x.is(Token::Literal)) {
+        let mut seq = ASTNode::Sequence(mark.text(), vec![]);
+        if let Some(_) = iter.next_if(|x| x.is(Token::Control) && x.text() == "{") {
+            while let Some(span) = iter.peek() {
+                if span.text() == "}" && span.is(Token::Control) {
                     iter.next();
-                    if stack.match_last(&Frame::Seq) {
-                        stack.pop_last();
-                        return Ok(());
-                    } else {
-                        return Err(Error::at(pos, "unmatched '}'"));
+                    return Ok(seq);
+                }else if span.text() == "{" && span.is(Token::Control) {
+                    return Err(Error::at(span.start(), "wrong control token"));
+                }
+                match span.token() {
+                    Token::Figure => {
+                        seq.insert_node(parse_fig(iter)?);
                     }
-                }
-                BodyKind::Gap => {
-                    return Err(Error::at(pos, "unopened sequence block"));
-                }
-            },
-            Token::GapStart => match kind {
-                BodyKind::Seq => {
-                    let n = parse_gap_flat(iter.by_ref(), stack)?;
-                    target.insert_nodes(n);
-                }
-                BodyKind::Gap => {
-                    return Err(Error::at(pos, "cannot nest gaps"));
-                }
-            },
-            Token::GapEnd => match kind {
-                BodyKind::Gap => {
-                    iter.next();
-                    if stack.match_last(&Frame::Gap) {
-                        stack.pop_last();
-                        return Ok(());
-                    } else {
-                        return Err(Error::at(pos, "unmatched ')'"));
+                    Token::Control => {
+                        // TODO: throw errors
+                        iter.next();
                     }
+                    _ => {}
                 }
-                BodyKind::Seq => {
-                    return Err(Error::at(pos, "unexpected ')' (no matching gap)"));
-                }
-            },
-            _ => {
-                return Err(Error::at(pos, "unexpected/unallowed keyword"));
             }
         }
-    }
-    Ok(())
-}
-
-// calling fn provides the parent node to attach to
-fn parse_seq<'a>(
-    iter: &mut Peekable<Tokenizer<'a>>,
-    stack: &mut FrameStack,
-) -> Result<ASTNode<'a>, Error> {
-    let name = parse_ident(iter.by_ref())?;
-    let mut ret = ASTNode::Sequence(name, vec![]);
-    let sp1 = iter
-        .next()
-        .ok_or_else(|| Error::eof("expected '{' after sequence name"))?;
-    match sp1.token() {
-        Token::SeqStart => {
-            stack.add_frame(Frame::Seq);
-        }
-        other => {
-            return Err(Error::at(
-                sp1.start(),
-                format!("expected '{{' after sequence name, found {other}"),
-            ));
-        }
-    };
-    parse_body(iter, stack, BodyKind::Seq, &mut ret)?;
-    Ok(ret)
-}
-
-fn parse_gap<'a>(
-    iter: &mut Peekable<Tokenizer<'a>>,
-    stack: &mut FrameStack,
-) -> Result<ASTNode<'a>, Error> {
-    let mut ret = ASTNode::Gap(vec![]);
-    let sp1 = iter
-        .next()
-        .ok_or_else(|| Error::eof("expected '(' to start a gap"))?;
-    match sp1.token() {
-        Token::GapStart => {
-            stack.add_frame(Frame::Gap);
-        }
-        other => {
-            return Err(Error::at(
-                sp1.start(),
-                format!("expected '(' to start a gap, found {other}"),
-            ));
-        }
-    };
-    parse_body(iter, stack, BodyKind::Gap, &mut ret)?;
-    Ok(ret)
-}
-
-// same as parse_gap, but returns the gap's children directly instead of
-// to avoid adding a level of AST depth
-fn parse_gap_flat<'a>(
-    iter: &mut Peekable<Tokenizer<'a>>,
-    stack: &mut FrameStack,
-) -> Result<Vec<Rc<ASTNode<'a>>>, Error> {
-    let mut ret = ASTNode::Gap(vec![]);
-    let sp1 = iter
-        .next()
-        .ok_or_else(|| Error::eof("expected '(' to start a gap"))?;
-    match sp1.token() {
-        Token::GapStart => {
-            stack.add_frame(Frame::Gap);
-        }
-        other => {
-            return Err(Error::at(
-                sp1.start(),
-                format!("expected '(' to start a gap, found {other}"),
-            ));
-        }
-    };
-    parse_body(iter, stack, BodyKind::Gap, &mut ret)?;
-    match ret {
-        ASTNode::Gap(v) => Ok(v),
-        _ => unreachable!(),
-    }
+    } 
+    panic!()
 }
