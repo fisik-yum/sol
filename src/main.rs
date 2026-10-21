@@ -1,5 +1,6 @@
 use clap::Parser;
 use sol::sys::interpreter::Pipeline;
+use sol::sys::warnings::Error;
 use sol::sys::{self, transforms};
 mod repl;
 use std::time;
@@ -18,7 +19,7 @@ struct Args {
     #[arg(short = 't', long, default_value_t = false, help = "print parse tree")]
     tree: bool,
 }
-fn main() {
+fn main() -> Result<(), String> {
     let args = Args::parse();
 
     if args.repl {
@@ -26,7 +27,7 @@ fn main() {
         if let Err(e) = rep.run() {
             println!("REPL error: {:?}", e);
         }
-        return;
+        return Ok(());
     }
 
     let loc = &args.f.as_str();
@@ -39,7 +40,7 @@ fn main() {
 
     let tokens = sys::tokenize::Tokenizer::from(t.as_str());
 
-    let tree = sys::parser::parse(tokens).unwrap();
+    let tree = sys::parser::parse(tokens.clone()).map_err(|e| e.to_string())?;
 
     let mut pipe = Pipeline::new();
     pipe.add_stage(&transforms::RemoveInteractive);
@@ -54,4 +55,5 @@ fn main() {
     println!("{}", res);
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");
+    Ok(())
 }

@@ -1,55 +1,43 @@
+use std::fmt::Display;
+
+use crate::sys::tokenize::Span;
+
 #[derive(Debug)]
-pub struct Error {
-    pos: Option<usize>,
-    msg: String,
+pub enum Error<'src> {
+    ParseError(Span<'src>),
+    EnvironmentError(String),
+    GlobalError(String),
 }
-
-impl Error {
-    pub fn at(pos: usize, msg: impl Into<String>) -> Self {
-        Self {
-            pos: Some(pos),
-            msg: msg.into(),
-        }
-    }
-
-    pub fn eof(msg: impl Into<String>) -> Self {
-        Self {
-            pos: None,
-            msg: format!("{} (unexpected end of input)", msg.into()),
-        }
-    }
-
-    pub fn global(msg: impl Into<String>) -> Self {
-        Self {
-            pos: None,
-            msg: msg.into(),
-        }
-    }
-
-    pub fn report(&self, filename: &str, src: &str) -> String {
-        match self.pos {
-            Some(pos) => {
-                let (line, col) = Self::line_col(src, pos);
-                format!("{filename}:{line}:{col}: error: {}", self.msg)
+impl Display for Error<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::EnvironmentError(s) => {
+                write!(f, "Environment: {}", s)
             }
-            None => format!("{filename}: error: {}", self.msg),
-        }
-    }
-
-    fn line_col(src: &str, pos: usize) -> (usize, usize) {
-        let mut line = 1;
-        let mut col = 1;
-        for (i, c) in src.char_indices() {
-            if i >= pos {
-                break;
+            Self::ParseError(span) => {
+                writeln!(f, "Parser:");
+                write!(f, "{}", Self::write_span(*span))
             }
-            if c == '\n' {
-                line += 1;
-                col = 1;
-            } else {
-                col += 1;
+            _ => {
+                write!(f, "")
             }
         }
-        (line, col)
+    }
+}
+impl<'src> Error<'src> {
+    pub fn parser(span: Span<'src>) -> Self {
+        return Self::ParseError(span);
+    }
+    pub fn environment(msg: String) -> Self {
+        return Self::EnvironmentError(msg);
+    }
+    pub fn global(msg: String) -> Self {
+        return Self::GlobalError(msg);
+    }
+    fn write_span(span: Span) -> String {
+        let mut sb = String::with_capacity(100);
+        let (r, c) = span.to_line();
+        sb.push_str(format!("({r},{c})").as_str());
+        return sb;
     }
 }

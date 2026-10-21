@@ -4,7 +4,7 @@ use crate::sys::{ast::ASTNode, warnings::Error};
 
 pub trait Transform {
     fn mutate<'m>(&self, _root: ASTNode<'m>) -> Result<ASTNode<'m>, Error> {
-        Err(Error::global("invalid transform"))
+        Err(Error::global("invalid transform".to_string()))
     }
 }
 
