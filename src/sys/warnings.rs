@@ -15,11 +15,11 @@ impl Display for Error<'_> {
                 write!(f, "Environment: {}", s)
             }
             Self::ParseError(span) => {
-                writeln!(f, "Parser:");
+                let _ = writeln!(f, "Parser:");
                 write!(f, "{}", Self::write_span(*span))
             }
-            _ => {
-                write!(f, "")
+            Self::GlobalError(s) => {
+                write!(f, "Global: {}", s)
             }
         }
     }

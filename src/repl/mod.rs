@@ -8,17 +8,18 @@ use sol::sys::tokenize;
 pub struct REPL<'e> {
     editor: rustyline::Editor<(), MemHistory>,
     environment: Environment<'e>,
+    pipeline: Pipeline<'e>,
 }
 
 impl<'e> REPL<'e> {
     pub fn new() -> Self {
         let conf = Config::builder();
         let editor = Editor::with_history(conf.build(), MemHistory::new()).unwrap();
-        let /*mut*/ pipeline = Pipeline::new();
         //pipeline.add_stage(&transforms::InteractiveMode);
         Self {
             editor,
-            environment: Environment::new(pipeline),
+            environment: Environment::new(),
+            pipeline: Pipeline::new(),
         }
     }
 
@@ -31,8 +32,12 @@ impl<'e> REPL<'e> {
                     let leaked_str: &'static str = Box::leak(read.into_boxed_str());
                     let tokens = tokenize::Tokenizer::from(leaked_str);
                     match parse(tokens) {
-                        Ok(ast) => match self.environment.interpret(ast) {
-                            Ok(result) => println!("{}", result),
+                        Ok(ast) => match self.pipeline.to_bytecode(ast) {
+                            Ok(result) => {
+                                self.environment.ingest_memory(result.1);
+                                let res = self.environment.execute(result.0).unwrap();
+                                println!("{} | {}", res.0, res.1);
+                            }
                             Err(e) => println!("Error: {:?}", e),
                         },
                         Err(e) => println!("Parse error: {:?}", e),

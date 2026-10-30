@@ -43,15 +43,17 @@ fn main() -> Result<(), String> {
 
     let mut pipe = Pipeline::new();
     pipe.add_stage(&transforms::RemoveInteractive);
-    let mut env = sys::interpreter::Environment::new(pipe);
+    let mut env = sys::interpreter::Environment::new();
 
     // ARG HANDLING CODE
     if args.tree {
         let _ = tree.prettyprint();
     }
 
-    let res = env.interpret(tree).unwrap();
-    println!("{}", res);
+    let (code, mem) = pipe.to_bytecode(tree).unwrap();
+    env.ingest_memory(mem);
+    let res = env.execute(code).unwrap();
+    println!("{} | {}", res.0, res.1);
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");
     Ok(())

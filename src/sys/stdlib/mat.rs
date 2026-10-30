@@ -33,7 +33,7 @@ pub fn seq_count_m<'p>(head: &ASTNode<'p>) -> Result<Mathrai, Error<'p>> {
     match head {
         ASTNode::Sequence(_s, children) => {
             for child in children {
-                match &**child {
+                match &child {
                     ASTNode::Figure(u) => res = res + u,
                     _ => {
                         return Err(Error::global(
