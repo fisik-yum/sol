@@ -1,7 +1,7 @@
 use rustyline::error::ReadlineError;
 use rustyline::history::MemHistory;
 use rustyline::{Config, Editor, Result};
-use sol::sys::interpreter::{Environment, Pipeline};
+use sol::sys::interpreter::{Environment, ExecutionResult, Pipeline};
 use sol::sys::parser::parse;
 use sol::sys::tokenize;
 
@@ -9,6 +9,7 @@ pub struct REPL<'e> {
     editor: rustyline::Editor<(), MemHistory>,
     environment: Environment<'e>,
     pipeline: Pipeline<'e>,
+    running: ExecutionResult,
 }
 
 impl<'e> REPL<'e> {
@@ -20,6 +21,7 @@ impl<'e> REPL<'e> {
             editor,
             environment: Environment::new(),
             pipeline: Pipeline::new(),
+            running: ExecutionResult::default(),
         }
     }
 
@@ -35,8 +37,13 @@ impl<'e> REPL<'e> {
                         Ok(ast) => match self.pipeline.to_bytecode(ast) {
                             Ok(result) => {
                                 self.environment.ingest_memory(result.1);
-                                let res = self.environment.execute(result.0).unwrap();
-                                println!("{} | {}", res.0, res.1);
+                                let (res, fields) = self.environment.execute(result.0).unwrap();
+                                for f in fields {
+                                    println!("{}", f)
+                                }
+                                println!("current: {}", &res);
+                                self.running.add(res);
+                                println!("global: {}", self.running);
                             }
                             Err(e) => println!("Error: {:?}", e),
                         },

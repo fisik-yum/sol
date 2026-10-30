@@ -52,8 +52,11 @@ fn main() -> Result<(), String> {
 
     let (code, mem) = pipe.to_bytecode(tree).unwrap();
     env.ingest_memory(mem);
-    let res = env.execute(code).unwrap();
-    println!("{} | {}", res.0, res.1);
+    let (res, fields) = env.execute(code).unwrap();
+    for f in fields {
+        println!("{}", f);
+    }
+    println!("{}", res);
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");
     Ok(())

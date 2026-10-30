@@ -2,6 +2,7 @@ use crate::sys::ast::ASTNode;
 use crate::sys::warnings::Error;
 use crate::sys::{stdlib, transforms};
 use std::collections::HashMap;
+use std::fmt::Display;
 use talm::aks::{Carry, StandardAkshara};
 use talm::unit::Mathrai;
 
@@ -10,8 +11,6 @@ pub enum Op {
     NAD(Mathrai),
     FN(String),
     BLOCK(Mathrai),
-    RELOAD,
-    LOAD(String),
     INSPECT(String),
 }
 
@@ -41,21 +40,15 @@ impl<'p> Pipeline<'p> {
         root: ASTNode<'p>,
     ) -> Result<(Vec<Op>, HashMap<&'p str, Mathrai>), Error<'p>> {
         let mut ops: Vec<Op> = vec![];
-        let mut children = root.get_children().iter().peekable();
+        let mut children = root.get_children().iter();
         let mut memo: HashMap<&'p str, Mathrai> = HashMap::new();
-        while let Some(node) = children.peek() {
+        while let Some(node) = children.next() {
             match node {
                 ASTNode::Tal(u) => {
                     ops.push(Op::TAL(*u));
                 }
                 ASTNode::Nad(u) => {
                     ops.push(Op::NAD(Mathrai(*u)));
-                }
-                ASTNode::Reload => {
-                    ops.push(Op::RELOAD);
-                }
-                ASTNode::Load(s) => {
-                    ops.push(Op::LOAD(s.to_string()));
                 }
                 ASTNode::Inspect(s) => {
                     ops.push(Op::INSPECT(s.to_string()));
@@ -66,6 +59,7 @@ impl<'p> Pipeline<'p> {
                 }
                 ASTNode::Figure(u) => {
                     // stop-gap. ideally consolidate into one block
+                    //Pipeline::consolidate_into_single(children.by_ref());
                     ops.push(Op::BLOCK(Mathrai(*u)));
                 }
                 ASTNode::FnCall(s) => {
@@ -73,10 +67,25 @@ impl<'p> Pipeline<'p> {
                 }
                 _ => {}
             }
-            children.next();
         }
         Ok((ops, memo))
     }
+    /*
+    fn consolidate_into_single(iter: impl Iterator<Item = &'p ASTNode<'p>>) -> Mathrai {
+        let mut p = iter.peekable();
+        let mut c = Mathrai(0);
+        while let Some(node) = p.peek() {
+            match node {
+                ASTNode::Figure(u) => {
+                    c = c + Mathrai(*u);
+                    p.next();
+                }
+                _ => break,
+            }
+        }
+        return c;
+    }
+    */
 }
 
 pub struct Environment<'src> {
@@ -95,13 +104,14 @@ impl<'src> Environment<'src> {
     pub fn ingest_memory(&mut self, mem: HashMap<&'src str, Mathrai>) {
         self.memory.extend(mem);
     }
-    pub fn execute(&mut self, ops: Vec<Op>) -> Result<(Mathrai, StandardAkshara), Error<'src>> {
+    pub fn execute(&mut self, ops: Vec<Op>) -> Result<(ExecutionResult, Vec<String>), Error<'src>> {
         let mut tape = ops.iter();
         let mut aks = StandardAkshara {
             count: 0,
             edam: Carry { num: 0, den: 4 },
         };
         let mut mat = Mathrai(0);
+        let mut fields: Vec<String> = vec![];
         while let Some(op) = tape.next() {
             match op {
                 Op::TAL(u) => {
@@ -123,11 +133,40 @@ impl<'src> Environment<'src> {
                         aks = aks + StandardAkshara::from_mathrai(*u, self.nadai)
                     }
                 }
-                _ => {
-                    // TODO
+                Op::INSPECT(s) => {
+                    if let Some(u) = self.memory.get(s.as_str()) {
+                        fields.push(format!("{s}: {u}"));
                     }
+                }
             }
         }
-        return Ok((mat, aks));
+        return Ok((ExecutionResult::new(mat, aks), fields));
+    }
+}
+pub struct ExecutionResult {
+    mat: Mathrai,
+    aks: StandardAkshara,
+}
+impl ExecutionResult {
+    pub fn new(mat: Mathrai, aks: StandardAkshara) -> Self {
+        Self { mat, aks }
+    }
+    pub fn add(&mut self, rhs: Self) {
+        self.mat = self.mat + rhs.mat;
+        self.aks = self.aks.clone() + rhs.aks;
+    }
+}
+impl Default for ExecutionResult {
+    fn default() -> Self {
+        Self {
+            mat: Mathrai(0),
+            aks: StandardAkshara::from_mathrai(Mathrai(0), Mathrai(4)),
+        }
+    }
+}
+
+impl Display for ExecutionResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} | {}", self.mat, self.aks)
     }
 }
