@@ -43,7 +43,8 @@ Example:
 
 A gap is required to be flat. That is, nesting 
 of gaps or any other container constructs is 
-disallowed.
+disallowed. Gaps do not exist internally. They 
+are pure syntactic sugar.
 
 Arguably the most critical container is the 
 sequence, which can be named and called 
@@ -85,4 +86,4 @@ cases when it comes to the execution engine.
 
 Z. FOOTNOTES
 -------------
-document last updated 2026-09-22 12:27
+document last updated 2026-10-30 11:13
