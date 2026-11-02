@@ -1,4 +1,6 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+};
 
 use crate::sys::tokenize::Span;
 
@@ -8,18 +10,22 @@ pub enum Error<'src> {
     EnvironmentError(String),
     GlobalError(String),
 }
+
 impl Display for Error<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::EnvironmentError(s) => {
-                write!(f, "Environment: {}", s)
+                write!(f, "Environment => {}", s)
             }
-            Self::ParseError(span) => {
-                let _ = writeln!(f, "Parser:");
-                write!(f, "{}", Self::write_span(*span))
+            Self::ParseError(s) => {
+                let (row, col) = s.to_line();
+                let segment = s.to_line_segment(row);
+                let _ = writeln!(f, "Error parsing on line {}:{}", row, col);
+                let _ = writeln!(f, "{}", segment.trim_end());
+                write!(f, "{}^ Error encountered here", " ".repeat(col - 1))
             }
             Self::GlobalError(s) => {
-                write!(f, "Global: {}", s)
+                write!(f, "Global => {}", s)
             }
         }
     }

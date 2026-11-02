@@ -18,7 +18,7 @@ struct Args {
     #[arg(short = 't', long, default_value_t = false, help = "print parse tree")]
     tree: bool,
 }
-fn main() -> Result<(), String> {
+fn main() {
     let args = Args::parse();
 
     if args.repl {
@@ -26,7 +26,7 @@ fn main() -> Result<(), String> {
         if let Err(e) = rep.run() {
             println!("REPL error: {:?}", e);
         }
-        return Ok(());
+        return;
     }
 
     let loc = &args.f.as_str();
@@ -39,7 +39,13 @@ fn main() -> Result<(), String> {
 
     let tokens = sys::tokenize::Tokenizer::from(t.as_str());
 
-    let tree = sys::parser::parse(tokens.clone()).map_err(|e| e.to_string())?;
+    let tree = match sys::parser::parse(tokens.clone()) {
+        Ok(tree) => tree,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(1);
+        }
+    };
 
     let mut pipe = Pipeline::new();
     pipe.add_stage(&transforms::RemoveInteractive);
@@ -59,5 +65,4 @@ fn main() -> Result<(), String> {
     println!("{}", res);
     let duration = (time::Instant::now() - start).as_micros();
     println!("finished executing {loc} in {duration} microseconds");
-    Ok(())
 }

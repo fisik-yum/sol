@@ -43,6 +43,9 @@ impl<'s> Span<'s> {
     pub fn start(&self) -> usize {
         self.start
     }
+    pub fn end(&self) -> usize {
+        self.end
+    }
     pub fn text(&self) -> &'s str {
         &self.source[self.start..self.end]
     }
@@ -60,6 +63,9 @@ impl<'s> Span<'s> {
             col += 1;
         }
         (row, col)
+    }
+    pub fn to_line_segment(&self, r: usize) -> &'s str {
+        return self.source.lines().nth(r-1).unwrap_or("");
     }
 }
 

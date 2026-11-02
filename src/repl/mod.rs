@@ -45,9 +45,9 @@ impl<'e> REPL<'e> {
                                 self.running.add(res);
                                 println!("global: {}", self.running);
                             }
-                            Err(e) => println!("Error: {:?}", e),
+                            Err(e) => println!("{}", e),
                         },
-                        Err(e) => println!("Parse error: {:?}", e),
+                        Err(e) => println!("{}", e),
                     }
                 }
                 Err(ReadlineError::Interrupted) => {
