@@ -39,9 +39,3 @@ Notes
 ======
 - I will replace the handwritten parser with something 
   more robust in the future
-- For now, gaps are syntactical sugar that are not 
-  transformed at the time of AST generation. This will 
-  definitely change.
-- A LLM was used initially to only help with refactoring 
-  the codebase. All such contributions are in the process 
-  of being removed and will be rewritten.
