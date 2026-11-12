@@ -27,14 +27,11 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error<'p>> {
             Token::Figure => {
                 tree.insert_node(parse_fig(iter)?);
             }
-            Token::Load => {
-                tree.insert_node(parse_lod(iter)?);
-            }
             Token::Inspect => {
                 tree.insert_node(parse_ins(iter)?);
             }
-            Token::Reload => {
-                tree.insert_node(ASTNode::Reload);
+            Token::Reset => {
+                tree.insert_node(ASTNode::Reset);
             }
             Token::Control => {
                 // TODO: throw errors
@@ -74,14 +71,6 @@ fn parse_fcl<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Erro
     if let Some(span) = iter.next_if(|x| x.is(Token::Literal)) {
         let val: &str = span.text();
         return Ok(ASTNode::FnCall(val));
-    }
-    return Err(fallback_error(iter));
-}
-fn parse_lod<'p>(iter: &mut Peekable<Tokenizer<'p>>) -> Result<ASTNode<'p>, Error<'p>> {
-    iter.next();
-    if let Some(span) = iter.next_if(|x| x.is(Token::Literal)) {
-        let val: &str = span.text();
-        return Ok(ASTNode::Load(val));
     }
     return Err(fallback_error(iter));
 }

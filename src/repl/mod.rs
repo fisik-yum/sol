@@ -4,6 +4,8 @@ use rustyline::{Config, Editor, Result};
 use sol::sys::interpreter::{Environment, ExecutionResult, Pipeline};
 use sol::sys::parser::parse;
 use sol::sys::tokenize;
+use talm::aks::StandardAkshara;
+use talm::unit::Mathrai;
 
 pub struct REPL<'e> {
     editor: rustyline::Editor<(), MemHistory>,
@@ -32,22 +34,29 @@ impl<'e> REPL<'e> {
                 Ok(read) => {
                     let _ = self.editor.add_history_entry(read.as_str());
                     let leaked_str: &'static str = Box::leak(read.into_boxed_str());
-                    let tokens = tokenize::Tokenizer::from(leaked_str);
-                    match parse(tokens) {
-                        Ok(ast) => match self.pipeline.to_bytecode(ast) {
-                            Ok(result) => {
-                                self.environment.ingest_memory(result.1);
-                                let (res, fields) = self.environment.execute(result.0).unwrap();
-                                for f in fields {
-                                    println!("{}", f)
+                    if leaked_str == "rst" {
+                        self.running = ExecutionResult::new(
+                            Mathrai(0),
+                            StandardAkshara::from_mathrai(Mathrai(0), self.environment.nadai),
+                        )
+                    } else {
+                        let tokens = tokenize::Tokenizer::from(leaked_str);
+                        match parse(tokens) {
+                            Ok(ast) => match self.pipeline.to_bytecode(ast) {
+                                Ok(result) => {
+                                    self.environment.ingest_memory(result.1);
+                                    let (res, fields) = self.environment.execute(result.0).unwrap();
+                                    for f in fields {
+                                        println!("{}", f)
+                                    }
+                                    println!("current: {}", &res);
+                                    self.running.add(res);
+                                    println!("global: {}", self.running);
                                 }
-                                println!("current: {}", &res);
-                                self.running.add(res);
-                                println!("global: {}", self.running);
-                            }
+                                Err(e) => println!("{}", e),
+                            },
                             Err(e) => println!("{}", e),
-                        },
-                        Err(e) => println!("{}", e),
+                        }
                     }
                 }
                 Err(ReadlineError::Interrupted) => {

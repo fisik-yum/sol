@@ -14,8 +14,7 @@ pub enum Token {
     Figure,  //
     Control, // )
     // "introspection" codes for interactive mode
-    Load,
-    Reload,
+    Reset,
     Inspect,
 }
 
@@ -83,8 +82,7 @@ impl std::fmt::Display for Token {
             Self::Control => write!(f, "control"),
 
             Self::Inspect => write!(f, "inspect"),
-            Self::Load => write!(f, "load"),
-            Self::Reload => write!(f, "reload"),
+            Self::Reset=> write!(f, "reset"),
         }
     }
 }
@@ -190,9 +188,8 @@ fn match_syntax_token<'a>(val: &'a str) -> Token {
         "seq" => Token::Seq,
         "tal" => Token::Tal,
         "nad" => Token::Nad,
-        "rld" => Token::Reload,
+        "rst" => Token::Reset,
         "ins" => Token::Inspect,
-        "lod" => Token::Load,
         _ => Token::Literal,
     }
 }
