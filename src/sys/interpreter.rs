@@ -12,6 +12,7 @@ pub enum Op {
     FN(String),
     BLOCK(Mathrai),
     INSPECT(String),
+    RESET,
 }
 
 pub struct Pipeline<'p> {
@@ -40,7 +41,7 @@ impl<'p> Pipeline<'p> {
         root: ASTNode<'p>,
     ) -> Result<(Vec<Op>, HashMap<&'p str, Mathrai>), Error<'p>> {
         let mut ops: Vec<Op> = vec![];
-        let mut children = root.get_children().iter();
+        let mut children = root.get_children().iter().peekable();
         let mut memo: HashMap<&'p str, Mathrai> = HashMap::new();
         while let Some(node) = children.next() {
             match node {
@@ -58,45 +59,46 @@ impl<'p> Pipeline<'p> {
                     memo.insert(s, c);
                 }
                 ASTNode::Figure(u) => {
-                    // stop-gap. ideally consolidate into one block
-                    //Pipeline::consolidate_into_single(children.by_ref());
-                    ops.push(Op::BLOCK(Mathrai(*u)));
+                    // consolidate into one block
+                    let mut c = Mathrai(*u);
+                    while let Some(node) = children.peek() {
+                        match node {
+                            ASTNode::Figure(u) => {
+                                c = c + Mathrai(*u);
+                                children.next();
+                            }
+                            _ => break,
+                        }
+                    }
+                    ops.push(Op::BLOCK(c));
                 }
                 ASTNode::FnCall(s) => {
                     ops.push(Op::FN(s.to_string()));
+                }
+                ASTNode::Reset => {
+                    ops.push(Op::RESET);
                 }
                 _ => {}
             }
         }
         Ok((ops, memo))
     }
-    /*
-    fn consolidate_into_single(iter: impl Iterator<Item = &'p ASTNode<'p>>) -> Mathrai {
-        let mut p = iter.peekable();
-        let mut c = Mathrai(0);
-        while let Some(node) = p.peek() {
-            match node {
-                ASTNode::Figure(u) => {
-                    c = c + Mathrai(*u);
-                    p.next();
-                }
-                _ => break,
-            }
-        }
-        return c;
-    }
-    */
 }
 
 pub struct Environment<'src> {
     memory: HashMap<&'src str, Mathrai>,
-    nadai: Mathrai,
+    pub running_count: ExecutionResult,
+    pub nadai: Mathrai,
     talam: Option<usize>,
 }
 impl<'src> Environment<'src> {
     pub fn new() -> Self {
         Self {
             memory: HashMap::new(),
+            running_count: ExecutionResult::new(
+                Mathrai(0),
+                StandardAkshara::from_mathrai(Mathrai(0), Mathrai(4)),
+            ),
             nadai: Mathrai(4),
             talam: None,
         }
@@ -124,23 +126,39 @@ impl<'src> Environment<'src> {
                     self.nadai = *u;
                 }
                 Op::BLOCK(u) => {
+                    self.chk_tal_def()?;
                     mat = mat + *u;
                     aks = aks + StandardAkshara::from_mathrai(*u, self.nadai)
                 }
                 Op::FN(s) => {
+                    self.chk_tal_def()?;
                     if let Some(u) = self.memory.get(s.as_str()) {
                         mat = mat + *u;
                         aks = aks + StandardAkshara::from_mathrai(*u, self.nadai)
+                    } else {
+                        return Err(Error::environment(format!("undefined seq: {}", s)));
                     }
                 }
                 Op::INSPECT(s) => {
                     if let Some(u) = self.memory.get(s.as_str()) {
-                        fields.push(format!("{s}: {u}"));
+                        fields.push(format!("inspect {s}: {u}"));
+                    } else {
+                        return Err(Error::environment(format!("undefined seq: {}", s)));
                     }
+                }
+                Op::RESET => {
+                    self.running_count = ExecutionResult::default();
+                    fields.push("reset running count".to_string());
                 }
             }
         }
         return Ok((ExecutionResult::new(mat, aks), fields));
+    }
+    fn chk_tal_def(&self) -> Result<(), Error<'src>> {
+        if self.talam.is_none() {
+            return Err(Error::EnvironmentError("undefined tal".to_string()));
+        }
+        Ok(())
     }
 }
 pub struct ExecutionResult {

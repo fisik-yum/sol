@@ -1,6 +1,4 @@
-use std::{
-    fmt::Display,
-};
+use std::fmt::Display;
 
 use crate::sys::tokenize::Span;
 
@@ -39,11 +37,5 @@ impl<'src> Error<'src> {
     }
     pub fn global(msg: String) -> Self {
         return Self::GlobalError(msg);
-    }
-    fn write_span(span: Span) -> String {
-        let mut sb = String::with_capacity(100);
-        let (r, c) = span.to_line();
-        sb.push_str(format!("({r},{c})").as_str());
-        return sb;
     }
 }

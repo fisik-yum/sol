@@ -7,8 +7,7 @@ pub enum ASTNode<'t> {
     FnCall(&'t str),
     Figure(usize),
 
-    Reload,
-    Load(&'t str),
+    Reset,
     Inspect(&'t str),
 }
 
@@ -22,8 +21,7 @@ impl<'t> std::fmt::Display for ASTNode<'t> {
             ASTNode::FnCall(s) => write!(f, "{s}"),
             ASTNode::Figure(n) => write!(f, "{n}"),
 
-            ASTNode::Reload => write!(f, "reload"),
-            ASTNode::Load(s) => write!(f, "load {s}"),
+            ASTNode::Reset => write!(f, "reset"),
             ASTNode::Inspect(s) => write!(f, "inspect {s}"),
         }
     }
@@ -84,7 +82,7 @@ impl<'n> ASTNode<'n> {
     }
 
     pub fn is_interactive(&self) -> bool {
-        matches!(self, Self::Reload | Self::Load(_) | Self::Inspect(_))
+        matches!(self, Self::Reset | Self::Inspect(_))
     }
 
     pub fn prettyprint(&self) {
