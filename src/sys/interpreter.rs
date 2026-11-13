@@ -136,12 +136,14 @@ impl<'src> Environment<'src> {
                         mat = mat + *u;
                         aks = aks + StandardAkshara::from_mathrai(*u, self.nadai)
                     } else {
-                        return Err(Error::environment(format!("undefined fn: {}", s)));
+                        return Err(Error::environment(format!("undefined seq: {}", s)));
                     }
                 }
                 Op::INSPECT(s) => {
                     if let Some(u) = self.memory.get(s.as_str()) {
-                        fields.push(format!("{s}: {u}"));
+                        fields.push(format!("inspect {s}: {u}"));
+                    } else {
+                        return Err(Error::environment(format!("undefined seq: {}", s)));
                     }
                 }
                 Op::RESET => {

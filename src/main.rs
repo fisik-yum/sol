@@ -5,7 +5,7 @@ mod repl;
 use std::time;
 use std::{fs, path::Path};
 #[derive(Parser, Debug)]
-#[command(version, about="command-line solkattu verification program", long_about = None)]
+#[command(version, about="Interpreter for Carnatic Percussion sequences", long_about = None)]
 struct Args {
     #[arg(short = 'f', default_value_t="".to_string() ,long = "file")]
     f: String,
@@ -20,11 +20,13 @@ struct Args {
 }
 fn main() {
     let args = Args::parse();
+    // no args
 
+    // args handling
     if args.repl {
         let mut rep = repl::REPL::new();
         if let Err(e) = rep.run() {
-            println!("REPL error: {:?}", e);
+            eprintln!("{:?}", e);
         }
         return;
     }
