@@ -58,9 +58,9 @@ impl<'p> Pipeline<'p> {
                     let c = stdlib::mat::seq_count_m(node)?;
                     memo.insert(s, c);
                 }
-                ASTNode::Figure(_) => {
+                ASTNode::Figure(u) => {
                     // consolidate into one block
-                    let mut c = Mathrai(0);
+                    let mut c = Mathrai(*u);
                     while let Some(node) = children.peek() {
                         match node {
                             ASTNode::Figure(u) => {
@@ -135,6 +135,8 @@ impl<'src> Environment<'src> {
                     if let Some(u) = self.memory.get(s.as_str()) {
                         mat = mat + *u;
                         aks = aks + StandardAkshara::from_mathrai(*u, self.nadai)
+                    } else {
+                        return Err(Error::environment(format!("undefined fn: {}", s)));
                     }
                 }
                 Op::INSPECT(s) => {

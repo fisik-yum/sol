@@ -37,12 +37,18 @@ impl<'e> REPL<'e> {
                     let ast = parse(tokens)?;
                     let result = self.pipeline.to_bytecode(ast)?;
                     self.environment.ingest_memory(result.1);
-                    let (res, fields) = self.environment.execute(result.0)?;
-                    for f in fields {
-                        println!("{}", f)
+                    match self.environment.execute(result.0) {
+                        Ok((res, fields)) => {
+                            for f in fields {
+                                println!("{}", f)
+                            }
+                            println!("current: {}", &res);
+                            self.environment.running_count.add(res);
+                        }
+                        Err(e) => {
+                            eprintln!("{:?}", e)
+                        }
                     }
-                    println!("current: {}", &res);
-                    self.environment.running_count.add(res);
                     println!("global: {}", self.environment.running_count);
                 }
                 Err(ReadlineError::Interrupted) => {
