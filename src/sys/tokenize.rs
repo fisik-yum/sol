@@ -64,7 +64,7 @@ impl<'s> Span<'s> {
         (row, col)
     }
     pub fn to_line_segment(&self, r: usize) -> &'s str {
-        return self.source.lines().nth(r-1).unwrap_or("");
+        return self.source.lines().nth(r - 1).unwrap_or("");
     }
 }
 
@@ -82,7 +82,7 @@ impl std::fmt::Display for Token {
             Self::Control => write!(f, "control"),
 
             Self::Inspect => write!(f, "inspect"),
-            Self::Reset=> write!(f, "reset"),
+            Self::Reset => write!(f, "reset"),
         }
     }
 }

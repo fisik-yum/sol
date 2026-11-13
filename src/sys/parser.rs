@@ -32,10 +32,12 @@ pub fn parse<'p>(tokenizer: Tokenizer<'p>) -> Result<ASTNode<'p>, Error<'p>> {
             }
             Token::Reset => {
                 tree.insert_node(ASTNode::Reset);
+                iter.next();
             }
             Token::Control => {
                 // TODO: throw errors
-                iter.next();
+                return Err(Error::ParseError(*span));
+                //iter.next();
             }
             _ => {}
         }

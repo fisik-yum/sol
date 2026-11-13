@@ -21,7 +21,7 @@ impl<'t> std::fmt::Display for ASTNode<'t> {
             ASTNode::FnCall(s) => write!(f, "{s}"),
             ASTNode::Figure(n) => write!(f, "{n}"),
 
-            ASTNode::Reset=> write!(f, "reset"),
+            ASTNode::Reset => write!(f, "reset"),
             ASTNode::Inspect(s) => write!(f, "inspect {s}"),
         }
     }

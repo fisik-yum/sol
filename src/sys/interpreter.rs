@@ -87,6 +87,7 @@ impl<'p> Pipeline<'p> {
 
 pub struct Environment<'src> {
     memory: HashMap<&'src str, Mathrai>,
+    pub running_count: ExecutionResult,
     pub nadai: Mathrai,
     talam: Option<usize>,
 }
@@ -94,6 +95,10 @@ impl<'src> Environment<'src> {
     pub fn new() -> Self {
         Self {
             memory: HashMap::new(),
+            running_count: ExecutionResult::new(
+                Mathrai(0),
+                StandardAkshara::from_mathrai(Mathrai(0), Mathrai(4)),
+            ),
             nadai: Mathrai(4),
             talam: None,
         }
@@ -137,7 +142,10 @@ impl<'src> Environment<'src> {
                         fields.push(format!("{s}: {u}"));
                     }
                 }
-                _ => {}
+                Op::RESET => {
+                    self.running_count = ExecutionResult::default();
+                    fields.push("reset running count".to_string());
+                }
             }
         }
         return Ok((ExecutionResult::new(mat, aks), fields));
