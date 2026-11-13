@@ -1,9 +1,3 @@
-NOTE: 
-Sol's internal API is being heavily reworked to support 
-proper REPL-style interaction and a pipeline system 
-for ASTs.
-
-
 Sol
 ===
 Sol is a very experimental system to programmatically
@@ -19,23 +13,17 @@ notation system, derived from the system used by
 one of my teachers. This results in a concise 
 numbering of pieces.
 
-At the moment, it is largely unoptimized and lacks a 
-REPL, which I intend to add. I have also thought 
-about adding exploration routines, possibly via a 
-WASM plugin system to enable assisted korvai-search.
-
 For the most part, the entire engine has been written 
-generally to be used as a library. I am trying to 
-build out the API as a composable pipeline system.
+generally to be used as a library. There is a functi-
+onal composable pipeline system, but the API is neither
+ robust nor well-defined.
 
-A particular challenge of notation is the arbitrary
-timescale transitions. It is for this reason that I 
-implemented this as a declarative system. I suppose 
-we cannot correctly describe everything concisely. 
-This will probably be solved with a custom dimensional 
-analysis library.
+This project aims to only provide a REPL and an interpreter 
+for composition and archival purposes.
 
-Notes
-======
-- I will replace the handwritten parser with something 
-  more robust in the future
+Originally, an LLM was used to refactor and do some 
+grunt work; As of 11-12-2026, all LLM-assisted code 
+has been removed and replaced with human-written code. 
+From now on, all contributions (if any) must be only 
+written by a human and not an agent or large language 
+model.
